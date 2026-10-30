@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSC738 Week 5: Regression and forecasting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ===== Edit these links each semester (see CONFIG in the script at the bottom too) ===== */
+:root{
+  --ink:#24253A; --muted:#5E5F75; --paper:#F7F7FB; --panel:#FFFFFF; --line:#DCDCE8;
+  --brand:#4B4C8F; --brand-soft:#ECECF5; --classA:#4B4C8F; --classB:#C2701F; --ok:#2E7D4F; --bad:#B23A3A;
+  --focus:#1D6FA5;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --ink:#E7E7F2; --muted:#A9AAC2; --paper:#16172A; --panel:#1F2038; --line:#34365A;
+    --brand:#9EA0E8; --brand-soft:#2A2B4A; --classA:#8E90E0; --classB:#E39B52; --ok:#6CC08F; --bad:#E07A7A; --focus:#7FB8E6;
+    color-scheme: dark; }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} *{transition:none!important} }
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Source Sans 3",Arial,sans-serif;font-size:18px;line-height:1.55}
+a{color:var(--brand)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+header.top{padding:40px 0 8px}
+.course{color:var(--muted);font-weight:600;margin:0 0 6px}
+h1{font-size:44px;line-height:1.1;margin:0 0 14px;letter-spacing:-0.01em}
+h2{font-size:30px;line-height:1.2;margin:0 0 8px}
+h3{font-size:21px;margin:22px 0 6px}
+p{margin:0 0 12px;max-width:72ch}
+.lead{font-size:20px;color:var(--muted);max-width:64ch}
+code,.mono{font-family:"JetBrains Mono","Courier New",monospace;font-size:0.88em}
+
+/* Explorer: the one bold element */
+.explorer{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:28px;align-items:start;margin:28px 0 12px}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px}
+canvas{display:block;width:100%;height:auto;border-radius:10px;touch-action:none}
+.controls{display:flex;flex-direction:column;gap:16px}
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg button{font:inherit;font-size:16px;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--paper)}
+label.ctl{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:16px}
+label.ctl span.val{font-weight:400;color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--brand)}
+.scores{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.score{background:var(--brand-soft);border-radius:12px;padding:10px 14px}
+.score b{display:block;font-size:28px;line-height:1.1}
+.score small{color:var(--muted);font-size:14px}
+.hint{font-size:16px;color:var(--muted);background:var(--panel);border-left:4px solid var(--brand);padding:10px 14px;border-radius:0 10px 10px 0}
+.legend{display:flex;gap:18px;font-size:15px;color:var(--muted);margin-top:8px}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+
+/* Progress */
+.progress{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px 24px;margin:28px 0}
+.progress ol{margin:10px 0 0;padding-left:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px 24px}
+.progress li label{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:16px}
+.progress input{margin-top:5px;accent-color:var(--brand);width:18px;height:18px}
+.bar{height:10px;background:var(--brand-soft);border-radius:999px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;width:0;background:var(--brand);transition:width .3s}
+
+/* Units */
+nav.units{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 0}
+nav.units a{font-size:15px;text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:4px 12px;color:var(--ink);background:var(--panel)}
+section.unit{border-top:1px solid var(--line);padding:44px 0 20px}
+.unit-head{display:flex;gap:16px;align-items:baseline}
+.num{font-weight:700;color:var(--brand);font-size:30px;min-width:1.6em}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;margin-top:16px}
+.video{aspect-ratio:16/9;background:var(--brand-soft);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--muted);text-align:center;padding:16px;overflow:hidden}
+.video iframe{width:100%;height:100%;border:0}
+.slides{aspect-ratio:16/9;background:var(--brand-soft);border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--muted);margin-top:14px}
+.slides.pdf{aspect-ratio:auto;height:min(80vh,760px)}
+.slides iframe{width:100%;height:100%;border:0}
+ul.key{margin:0;padding-left:20px} ul.key li{margin-bottom:6px}
+.demo{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-top:18px}
+.demo h3{margin-top:0}
+.out{font-size:20px;font-weight:700}
+.out.A{color:var(--classA)} .out.B{color:var(--classB)}
+svg text{font-family:"Source Sans 3",Arial,sans-serif}
+.demo svg{max-width:620px;display:block}
+
+/* Quiz */
+.quiz{margin-top:18px}
+.q{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-bottom:12px}
+.q p.stem{font-weight:600;margin-bottom:10px}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opts button{text-align:left;font:inherit;font-size:17px;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer}
+.opts button.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--panel))}
+.opts button.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--panel))}
+.fb{margin-top:10px;font-size:16px}
+.fb.right{color:var(--ok)} .fb.wrong{color:var(--bad)}
+.fb span{color:var(--ink)}
+
+table.cmp{border-collapse:collapse;width:100%;font-size:16px;margin-top:12px}
+table.cmp th,table.cmp td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+table.cmp th{color:var(--muted);font-weight:600}
+.tablewrap{overflow-x:auto}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 20px}
+textarea{width:100%;min-height:110px;font:inherit;font-size:16px;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.btn{display:inline-block;font:inherit;font-weight:600;padding:10px 18px;border-radius:10px;background:var(--brand);color:var(--paper);text-decoration:none;border:0;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--brand);border:1px solid var(--brand)}
+footer{color:var(--muted);font-size:15px;padding:40px 0 60px;border-top:1px solid var(--line);margin-top:40px}
+
+@media (max-width:860px){
+  h1{font-size:34px}
+  .explorer,.grid2,.cards{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <p class="course">CSC738 Advanced Machine Learning, Week 5 self-study</p>
+  <h1>Predicting numbers: regression and forecasting</h1>
+  <p class="lead">Regression models predict a number instead of a class. Change the model and its complexity below, and watch the fitted curve, the training error and the test error. Then work through forecasting, evaluation and the common pitfalls.</p>
+</header>
+
+<div class="explorer" id="explorer">
+  <div class="stage">
+    <canvas id="cv" width="640" height="480" aria-label="Scatter plot of training and test points with the fitted regression curve"></canvas>
+    <div class="legend"><span><i class="dot" style="background:var(--classA)"></i>Training data</span><span><i class="dot" style="border:2px solid var(--classA);background:transparent"></i>Test data</span><span><i class="dot" style="background:var(--classB)"></i>Fitted curve</span></div>
+  </div>
+  <div class="controls">
+    <div>
+      <p style="font-weight:600;margin-bottom:6px">Model</p>
+      <div class="seg" id="modelSeg" role="group" aria-label="Choose a regressor">
+        <button data-m="lin" aria-pressed="true">Linear</button>
+        <button data-m="poly" aria-pressed="false">Polynomial</button>
+        <button data-m="knn" aria-pressed="false">KNN</button>
+        <button data-m="tree" aria-pressed="false">Decision Tree</button>
+      </div>
+    </div>
+    <label class="ctl" id="degCtl" hidden>Polynomial degree <span class="val" id="degVal">3</span><input type="range" id="deg" min="1" max="12" value="3"></label>
+    <label class="ctl" id="kCtl" hidden>Neighbours (k) <span class="val" id="kVal">5</span><input type="range" id="k" min="1" max="40" value="5"></label>
+    <label class="ctl" id="dCtl" hidden>Maximum tree depth <span class="val" id="dVal">3</span><input type="range" id="depth" min="1" max="10" value="3"></label>
+    <label class="ctl">Noise in the data <span class="val" id="nVal">medium</span><input type="range" id="noise" min="1" max="3" value="2"></label>
+    <div class="scores">
+      <div class="score"><b id="trErr">–</b><small>Training RMSE</small></div>
+      <div class="score"><b id="teErr">–</b><small>Test RMSE</small></div>
+    </div>
+    <p class="hint" id="hint"></p>
+    <button class="btn ghost" id="reseed">New random sample</button>
+  </div>
+</div>
+
+<section class="progress" aria-labelledby="progTitle">
+  <h2 id="progTitle">Your plan for this week</h2>
+  <p>About 3 to 4 hours in total. Tick each step as you finish it; your ticks are saved in this browser only.</p>
+  <div class="bar" aria-hidden="true"><i id="barFill"></i></div>
+  <p id="progText" style="font-size:15px;color:var(--muted);margin-top:6px"></p>
+  <ol id="checklist"></ol>
+  <nav class="units" aria-label="Jump to a topic">
+    <a href="#slides">Slides</a><a href="#reg">Regression models</a><a href="#ts">Forecasting</a><a href="#eval">Evaluation</a><a href="#chal">Challenges</a><a href="#practice">Lab</a>
+  </nav>
+</section>
+
+<section class="unit" id="slides">
+  <h2>Lecture slides</h2>
+  <p>Skim the slides first for the big picture, then come back to them as you work through each topic.</p>
+  <div class="slides" id="slideBox"></div>
+  <p id="slideLink" style="margin-top:10px"></p>
+</section>
+
+<section class="unit" id="reg">
+  <div class="unit-head"><span class="num">1</span><h2>Regression models</h2></div>
+  <div class="grid2">
+    <div class="video" data-video="reg"></div>
+    <div>
+      <ul class="key">
+        <li><b>Linear Regression</b> fits a straight line by minimising squared errors.</li>
+        <li><b>Ridge and Lasso</b> add a penalty (alpha) on large weights; Lasso can drop features.</li>
+        <li><b>SVR</b> ignores errors inside a tube of width ε.</li>
+        <li><b>KNN, trees, Random Forest, boosting</b> work as in Week 4, but average numbers instead of voting.</li>
+      </ul>
+      <p class="hint">In the explorer: choose Polynomial and move the degree from 1 to 12. Watch the training RMSE keep falling while the test RMSE rises again.</p>
+    </div>
+  </div>
+  <div class="quiz" data-quiz="reg"></div>
+</section>
+
+<section class="unit" id="ts">
+  <div class="unit-head"><span class="num">2</span><h2>Time-series forecasting</h2></div>
+  <div class="grid2">
+    <div class="video" data-video="ts"></div>
+    <div>
+      <ul class="key">
+        <li>Build features from the past only: lags, rolling statistics (after shift(1)), calendar.</li>
+        <li>Split by time: train on the past, test on the most recent period.</li>
+        <li>Tune with TimeSeriesSplit, never a shuffled split.</li>
+        <li>Always compare with naive baselines.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="demo">
+    <h3>Try it: forecasting baselines</h3>
+    <p>Two years of weekly cases (synthetic). Choose a baseline and see how well it forecasts the second year.</p>
+    <svg id="tsSvg" viewBox="0 0 620 260" width="100%" role="img" aria-label="Weekly series with the chosen baseline forecast for the second year"></svg>
+    <div class="seg" id="baseSeg" role="group" aria-label="Choose a baseline" style="margin:10px 0">
+      <button data-b="naive" aria-pressed="true">Naive (last week)</button>
+      <button data-b="seasonal" aria-pressed="false">Seasonal naive (52 weeks ago)</button>
+      <button data-b="ma" aria-pressed="false">Moving average</button>
+    </div>
+    <label class="ctl" id="maCtl" hidden>Moving-average window (weeks) <span class="val" id="maVal">4</span><input type="range" id="ma" min="2" max="12" value="4"></label>
+    <p>MAE over the second year: <span class="out" id="tsMae">–</span> cases per week</p>
+  </div>
+  <div class="quiz" data-quiz="ts"></div>
+</section>
+
+<section class="unit" id="eval">
+  <div class="unit-head"><span class="num">3</span><h2>Evaluation and result analysis</h2></div>
+  <div class="grid2">
+    <div class="video" data-video="eval"></div>
+    <div>
+      <ul class="key">
+        <li><b>MAE</b>: typical error size, in target units.</li>
+        <li><b>RMSE</b>: like MAE, but large errors count more.</li>
+        <li><b>R²</b>: share of the variance explained; 0 = no better than the mean, can be negative.</li>
+        <li><b>MAPE</b>: error as a percentage; fails when actual values are near 0.</li>
+        <li>Then plot residuals: a pattern means something is missing.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="demo">
+    <h3>Try it: a metrics calculator</h3>
+    <p>These are the five predictions from the lecture's worked example. Change the predictions and watch the metrics. Try making one prediction very wrong: which metric reacts most?</p>
+    <div class="tablewrap"><table class="cmp" id="metTable"><thead><tr><th>Actual</th><th>Predicted (edit me)</th><th>Error</th></tr></thead><tbody></tbody></table></div>
+    <div class="scores" style="grid-template-columns:repeat(4,1fr);margin-top:12px">
+      <div class="score"><b id="mMAE">–</b><small>MAE</small></div>
+      <div class="score"><b id="mRMSE">–</b><small>RMSE</small></div>
+      <div class="score"><b id="mR2">–</b><small>R²</small></div>
+      <div class="score"><b id="mMAPE">–</b><small>MAPE</small></div>
+    </div>
+    <p style="margin-top:10px"><button class="btn ghost" id="metReset" type="button">Reset to the lecture example</button></p>
+  </div>
+  <div class="quiz" data-quiz="eval"></div>
+</section>
+
+<section class="unit" id="chal">
+  <div class="unit-head"><span class="num">4</span><h2>Challenges: overfitting, imbalance, leakage</h2></div>
+  <div class="grid2">
+    <div class="video" data-video="chal"></div>
+    <div>
+      <ul class="key">
+        <li><b>Overfitting:</b> low training error, high validation error. Regularise, simplify, add data.</li>
+        <li><b>Imbalanced data:</b> rare classes or rare extreme values hide behind a good average score.</li>
+        <li><b>Leakage:</b> information from the test set or the future gets into training.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="cards">
+    <div class="card"><h3 style="margin-top:0">Leakage check</h3><p>For every feature, ask: would I know this value at the moment I make the prediction? A rolling mean that includes this week fails the test.</p></div>
+    <div class="card"><h3 style="margin-top:0">Rare extremes</h3><p>In the lab, the overall MAE looks fine, but the error on the top 10% of weeks is more than twice as large. Always check errors on the cases that matter most.</p></div>
+  </div>
+  <div class="quiz" data-quiz="chal"></div>
+</section>
+
+<section class="unit" id="practice">
+  <div class="unit-head"><span class="num">5</span><h2>Practise in the lab and reflect</h2></div>
+  <p>Now apply everything in the Week 5 lab. Part 1 is a template for the regression option of Assignment 1; Part 2 is a template for the time-series option of Assignment 2.</p>
+  <p style="display:flex;gap:12px;flex-wrap:wrap">
+    <a class="btn" id="labLink" href="#">Open Google Colab</a>
+    <a class="btn ghost" id="sheetLink" href="#">Download the lab sheet</a>
+  </p>
+  <h3>Reflection (stays on this device)</h3>
+  <p>Which topic is still unclear, and what will you do about it before the next class?</p>
+  <textarea id="reflect" aria-label="Your reflection"></textarea>
+</section>
+
+<section class="unit" id="ufuture">
+  <div class="unit-head"><span class="num">6</span><h2>Discuss in i-Discuss (UFuture)</h2></div>
+  <p>Post your answers to the Week 5 lab activities in the Week 5 topic of i-Discuss on UFuture, together with your reflection.</p>
+</section>
+
+<footer>CSC738 Advanced Machine Learning. Self-study material for Week 5: Supervised Learning II (Regression, Forecasting and Challenges).</footer>
+</div>
+
+<script>
+/* ===================== LECTURER: EDIT THESE LINKS ===================== */
+const CONFIG = {
+  // Paste YouTube links, or leave "" to show a placeholder.
+  videos: { reg:"", ts:"", eval:"", chal:"" },
+  // Slides: a PDF in the same repository (e.g. "week5_slides.pdf") or a Google Slides link.
+  slidesUrl: "",
+  labUrl: "",      // Google Colab link to the Week 5 notebook
+  sheetUrl: ""     // e.g. "week5_lab.docx" uploaded to the same repository
+};
+/* ===================================================================== */
+
+const $ = s => document.querySelector(s);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+function ytEmbed(url){ const m = url.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/); return m ? "https://www.youtube-nocookie.com/embed/" + m[1] : null; }
+document.querySelectorAll(".video").forEach(el => {
+  const url = CONFIG.videos[el.dataset.video] || "", src = url && ytEmbed(url);
+  if (src) el.innerHTML = `<iframe src="${src}" title="Video: ${el.closest("section").querySelector("h2").textContent}" allowfullscreen loading="lazy"></iframe>`;
+  else el.textContent = "Video link will be added by your lecturer.";
+});
+for (const [id, url] of [["#labLink", CONFIG.labUrl], ["#sheetLink", CONFIG.sheetUrl]]) {
+  const a = $(id); if (!a) continue;
+  if (url) { a.href = url; a.target = "_blank"; a.rel = "noopener"; }
+  else { a.removeAttribute("href"); a.setAttribute("aria-disabled", "true"); a.style.opacity = .5; a.title = "Link will be added by your lecturer"; }
+}
+(function(){
+  const url = CONFIG.slidesUrl.trim(), box = $("#slideBox"), link = $("#slideLink");
+  if (!url){ box.textContent = "Slides will be added by your lecturer."; return; }
+  let src = url; const isPdf = /\.pdf($|[?#])/i.test(url);
+  const g = url.match(/docs\.google\.com\/presentation\/d\/(?:e\/)?([\w-]+)/);
+  if (g) src = url.includes("/d/e/") ? url.replace(/\/pub.*$/, "/embed?start=false&loop=false") : `https://docs.google.com/presentation/d/${g[1]}/embed?start=false&loop=false`;
+  if (isPdf) box.classList.add("pdf");
+  box.innerHTML = `<iframe src="${src}" title="Week 5 lecture slides" loading="lazy" allowfullscreen></iframe>`;
+  link.innerHTML = `<a href="${url}" target="_blank" rel="noopener">Open the slides in a new tab</a>${isPdf ? " (best on phones)" : ""}`;
+})();
+
+/* ---------- Checklist ---------- */
+const KEY = "csc738w5";
+const STEPS = ["Explore the regression explorer at the top (15 min)","Skim the lecture slides (30 min)","1 Regression models: video and check (30 min)","2 Forecasting: video, demo and check (30 min)","3 Evaluation: video, calculator and check (25 min)","4 Challenges: video and check (20 min)","Week 5 lab in Colab (60–90 min)","Post in i-Discuss with your reflection (10 min)"];
+const ol = $("#checklist");
+STEPS.forEach((s, i) => {
+  const li = document.createElement("li");
+  li.innerHTML = `<label><input type="checkbox" ${store.get(KEY+"-done", []).includes(i) ? "checked" : ""}><span>${s}</span></label>`;
+  li.querySelector("input").addEventListener("change", e => {
+    const set = new Set(store.get(KEY+"-done", [])); e.target.checked ? set.add(i) : set.delete(i);
+    store.set(KEY+"-done", [...set]); updateBar();
+  });
+  ol.appendChild(li);
+});
+function updateBar(){ const n = store.get(KEY+"-done", []).length; $("#barFill").style.width = (100*n/STEPS.length)+"%"; $("#progText").textContent = `${n} of ${STEPS.length} steps done`; }
+updateBar();
+const ta = $("#reflect"); ta.value = store.get(KEY+"-reflect", ""); ta.addEventListener("input", () => store.set(KEY+"-reflect", ta.value));
+
+/* ---------- Regression explorer ---------- */
+let seed = 11;
+function rand(){ seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+function gauss(){ let u = 0, v = 0; while(!u) u = rand(); while(!v) v = rand(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+const truth = x => 0.5 + 0.3*Math.sin(5*x) + 0.15*x;
+const state = { model:"lin", deg:3, k:5, depth:3, noise:2 };
+let pts = [];
+function makeData(){ const s = [0.04, 0.08, 0.14][state.noise-1]; pts = [];
+  for (let i = 0; i < 60; i++){ const x = rand(); pts.push({x, y: truth(x) + gauss()*s, test: i % 3 === 0}); } }
+function solve(A, b){ const n = b.length; for (let i = 0; i < n; i++){ let p = i; for (let r = i+1; r < n; r++) if (Math.abs(A[r][i]) > Math.abs(A[p][i])) p = r;
+  [A[i],A[p]] = [A[p],A[i]]; [b[i],b[p]] = [b[p],b[i]]; for (let r = i+1; r < n; r++){ const f = A[r][i]/A[i][i]; for (let c = i; c < n; c++) A[r][c] -= f*A[i][c]; b[r] -= f*b[i]; } }
+  const x = Array(n).fill(0); for (let i = n-1; i >= 0; i--){ let s = b[i]; for (let c = i+1; c < n; c++) s -= A[i][c]*x[c]; x[i] = s/A[i][i]; } return x; }
+function fitPoly(tr, d){ const z = x => 2*x - 1, n = d+1, A = Array.from({length:n}, () => Array(n).fill(0)), b = Array(n).fill(0);
+  for (const p of tr){ const ph = Array.from({length:n}, (_,j) => z(p.x)**j); for (let i = 0; i < n; i++){ b[i] += ph[i]*p.y; for (let j = 0; j < n; j++) A[i][j] += ph[i]*ph[j]; } }
+  for (let i = 0; i < n; i++) A[i][i] += 1e-9; const w = solve(A, b); return x => w.reduce((s,wi,j) => s + wi*z(x)**j, 0); }
+function fitKNN(tr, k){ return x => { const d = tr.map(p => [Math.abs(p.x-x), p.y]).sort((a,b)=>a[0]-b[0]).slice(0, Math.min(k, tr.length)); return d.reduce((s,v)=>s+v[1],0)/d.length; }; }
+function buildTree(s, depth){ const m = s.reduce((a,p)=>a+p.y,0)/s.length; if (depth === 0 || s.length < 3) return {leaf:true, m};
+  const xs = [...s].sort((a,b)=>a.x-b.x); let best = null;
+  for (let i = 1; i < xs.length; i++){ const L = xs.slice(0,i), R = xs.slice(i), sse = a => { const mm = a.reduce((q,p)=>q+p.y,0)/a.length; return a.reduce((q,p)=>q+(p.y-mm)**2,0); };
+    const g = sse(L)+sse(R); if (!best || g < best.g) best = {g, t:(xs[i-1].x+xs[i].x)/2, L, R}; }
+  return {t:best.t, l:buildTree(best.L, depth-1), r:buildTree(best.R, depth-1)}; }
+function fitTree(tr, d){ const root = buildTree(tr, d); return x => { let n = root; while(!n.leaf) n = x <= n.t ? n.l : n.r; return n.m; }; }
+const HINTS = {
+  lin:"A straight line cannot follow this wavy pattern: both errors are high. That is underfitting.",
+  poly:"Raise the degree: around 4 to 6 the curve follows the pattern. At high degrees it wiggles through the training points and the test error rises: overfitting.",
+  knn:"k = 1 copies the nearest training point: training error is 0, but test error is not. Large k averages too much and flattens the curve.",
+  tree:"A regression tree predicts a constant in each box, giving a step shape. Deep trees chase the noise."
+};
+const cv = $("#cv"), ctx = cv.getContext("2d");
+function draw(){
+  const tr = pts.filter(p=>!p.test), te = pts.filter(p=>p.test);
+  const f = state.model === "lin" ? fitPoly(tr, 1) : state.model === "poly" ? fitPoly(tr, state.deg) : state.model === "knn" ? fitKNN(tr, state.k) : fitTree(tr, state.depth);
+  const W = cv.width, H = cv.height, X = x => 30 + x*(W-60), Y = y => H - 30 - (y+0.1)*(H-60)/1.3;
+  ctx.fillStyle = css("--panel"); ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle = css("--line"); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(30,H-30); ctx.lineTo(W-30,H-30); ctx.stroke();
+  ctx.strokeStyle = css("--classB"); ctx.lineWidth = 4; ctx.beginPath();
+  for (let i = 0; i <= 300; i++){ const x = i/300, y = Math.max(-0.1, Math.min(1.2, f(x))); i ? ctx.lineTo(X(x), Y(y)) : ctx.moveTo(X(x), Y(y)); } ctx.stroke();
+  for (const p of pts){ ctx.beginPath(); ctx.arc(X(p.x), Y(p.y), 6, 0, 2*Math.PI);
+    if (p.test){ ctx.fillStyle = css("--panel"); ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = css("--classA"); ctx.stroke(); } else { ctx.fillStyle = css("--classA"); ctx.fill(); } }
+  const rmse = s => Math.sqrt(s.reduce((a,p)=>a+(f(p.x)-p.y)**2,0)/s.length);
+  $("#trErr").textContent = rmse(tr).toFixed(3); $("#teErr").textContent = rmse(te).toFixed(3); $("#hint").textContent = HINTS[state.model];
+}
+document.querySelectorAll("#modelSeg button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("#modelSeg button").forEach(x => x.setAttribute("aria-pressed", x === b)); state.model = b.dataset.m;
+  $("#degCtl").hidden = state.model !== "poly"; $("#kCtl").hidden = state.model !== "knn"; $("#dCtl").hidden = state.model !== "tree"; draw(); }));
+$("#deg").addEventListener("input", e => { state.deg = +e.target.value; $("#degVal").textContent = state.deg; draw(); });
+$("#k").addEventListener("input", e => { state.k = +e.target.value; $("#kVal").textContent = state.k; draw(); });
+$("#depth").addEventListener("input", e => { state.depth = +e.target.value; $("#dVal").textContent = state.depth; draw(); });
+$("#noise").addEventListener("input", e => { state.noise = +e.target.value; $("#nVal").textContent = ["low","medium","high"][state.noise-1]; makeData(); draw(); });
+$("#reseed").addEventListener("click", () => { seed = Math.floor(Math.random()*1e6)+1; makeData(); draw(); });
+makeData(); draw();
+
+/* ---------- Forecast baselines ---------- */
+const series = []; { let s2 = 5; const r = () => { s2 = (s2*16807)%2147483647; return (s2-1)/2147483646; };
+  for (let w = 0; w < 104; w++) series.push(Math.round(80 + 0.2*w + 30*Math.sin(2*Math.PI*(w-12)/52) + (r()-0.5)*24)); }
+const bstate = { b:"naive", ma:4 };
+function tsDraw(){
+  const fc = []; for (let w = 52; w < 104; w++){
+    if (bstate.b === "naive") fc.push(series[w-1]);
+    else if (bstate.b === "seasonal") fc.push(series[w-52]);
+    else { let s = 0; for (let j = 1; j <= bstate.ma; j++) s += series[w-j]; fc.push(s/bstate.ma); } }
+  const mae = fc.reduce((a,p,i)=>a+Math.abs(p-series[52+i]),0)/fc.length;
+  const X = w => 30 + w*(560/103), lo = Math.min(...series)-10, hi = Math.max(...series)+10, Y = v => 230 - (v-lo)/(hi-lo)*200;
+  const line = (arr, off) => arr.map((v,i)=>`${X(i+off).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+  $("#tsSvg").innerHTML = `<line x1="${X(52)}" y1="20" x2="${X(52)}" y2="235" stroke="${css("--line")}" stroke-dasharray="6 6"/>
+    <text x="${X(26)}" y="252" text-anchor="middle" font-size="15" fill="${css("--muted")}">Year 1 (history)</text><text x="${X(78)}" y="252" text-anchor="middle" font-size="15" fill="${css("--muted")}">Year 2 (forecast)</text>
+    <polyline points="${line(series,0)}" fill="none" stroke="${css("--classA")}" stroke-width="3"/>
+    <polyline points="${line(fc,52)}" fill="none" stroke="${css("--classB")}" stroke-width="3" stroke-dasharray="8 5"/>`;
+  $("#tsMae").textContent = mae.toFixed(1);
+}
+document.querySelectorAll("#baseSeg button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("#baseSeg button").forEach(x => x.setAttribute("aria-pressed", x === b)); bstate.b = b.dataset.b; $("#maCtl").hidden = bstate.b !== "ma"; tsDraw(); }));
+$("#ma").addEventListener("input", e => { bstate.ma = +e.target.value; $("#maVal").textContent = bstate.ma; tsDraw(); });
+tsDraw();
+
+/* ---------- Metrics calculator ---------- */
+const ACT = [10,12,15,18,20], PRED0 = [11,11,16,17,22];
+const mtb = $("#metTable tbody");
+ACT.forEach((a,i) => { const tr = document.createElement("tr");
+  tr.innerHTML = `<td>${a}</td><td><input type="number" step="0.5" value="${PRED0[i]}" data-i="${i}" aria-label="Prediction ${i+1}" style="width:90px;font:inherit;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink)"></td><td class="err"></td>`; mtb.appendChild(tr); });
+function met(){
+  const P = [...mtb.querySelectorAll("input")].map(x => +x.value), e = P.map((p,i)=>p-ACT[i]);
+  mtb.querySelectorAll(".err").forEach((td,i) => td.textContent = (e[i] > 0 ? "+" : "") + e[i]);
+  const n = ACT.length, mean = ACT.reduce((a,b)=>a+b,0)/n, sse = e.reduce((a,v)=>a+v*v,0), sst = ACT.reduce((a,v)=>a+(v-mean)**2,0);
+  $("#mMAE").textContent = (e.reduce((a,v)=>a+Math.abs(v),0)/n).toFixed(2); $("#mRMSE").textContent = Math.sqrt(sse/n).toFixed(2);
+  $("#mR2").textContent = (1 - sse/sst).toFixed(2); $("#mMAPE").textContent = (100*e.reduce((a,v,i)=>a+Math.abs(v)/ACT[i],0)/n).toFixed(1) + "%";
+}
+mtb.addEventListener("input", met); $("#metReset").addEventListener("click", () => { mtb.querySelectorAll("input").forEach((x,i) => x.value = PRED0[i]); met(); }); met();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { draw(); tsDraw(); });
+
+/* ---------- Quick checks ---------- */
+const QUIZ = {
+ reg:[["What does Lasso do that Ridge does not?",["It uses no penalty","It can push some weights to exactly zero, selecting features","It only works for classification","It needs no scaling"],1,"The L1 penalty can set weights to zero, so Lasso also performs feature selection."],
+      ["In SVR, which errors are ignored?",["All errors","Errors larger than C","Errors inside the tube of width ε","Errors on the test set"],2,"Only points outside the ε-tube are penalised."],
+      ["Why might a Random Forest regressor struggle with a rising trend?",["It needs scaling","It cannot predict beyond the range of training targets","It always overfits","It ignores lag features"],1,"Each leaf predicts an average of training values, so predictions cannot exceed what it has seen."]],
+ ts:[["Why must you not shuffle a time series before splitting?",["Shuffling is slow","The model would train on future weeks and look better than it really is","Shuffling removes seasonality","TimeSeriesSplit requires it"],1,"Training on the future is a form of leakage."],
+     ["What is a seasonal naive forecast for weekly data with a yearly pattern?",["The mean of all weeks","Last week's value","The value 52 weeks ago","Zero"],2,"It repeats the value from the same week last year."],
+     ["A rolling mean feature for week t should be computed from:",["Weeks t−4 to t","Weeks t−3 to t+1","Weeks t−4 to t−1 (after shift(1))","All weeks"],2,"It must end before t, or it contains the answer."]],
+ eval:[["A model has R² = −0.2 on the test set. What does that mean?",["It is perfect","It explains 20% of the variance","It is worse than always predicting the mean","The metric is broken"],2,"R² below 0 means predicting the mean would have been better."],
+       ["Why is RMSE larger than MAE when there is one big error?",["RMSE squares errors, so large ones count more","MAE ignores large errors","RMSE uses percentages","They are always equal"],0,"Squaring gives large errors more weight before averaging."],
+       ["When is MAPE a poor choice?",["When actual values are close to 0","When errors are small","For time series","When using RMSE too"],0,"Dividing by values near zero makes the percentage explode."]],
+ chal:[["Training RMSE is 5 and validation RMSE is 40. What is happening?",["Underfitting","Overfitting","Perfect fit","Leakage is impossible"],1,"A big gap between training and validation error is the sign of overfitting."],
+       ["Which feature leaks information when predicting hospital admission?",["Patient age","Blood pressure at arrival","Number of days spent in hospital","Time of arrival"],2,"Days in hospital is only known after admission."],
+       ["The overall MAE is good, but outbreak weeks have large errors. What should you do?",["Report only the overall MAE","Check and report errors on the extreme weeks separately","Delete the outbreak weeks","Switch to accuracy"],1,"Rare extreme values are often the cases that matter most."]]
+};
+document.querySelectorAll(".quiz").forEach(box => {
+  box.insertAdjacentHTML("beforeend", `<h3>Check your understanding</h3>`);
+  QUIZ[box.dataset.quiz].forEach(([stem, opts, ans, why]) => {
+    const q = document.createElement("div"); q.className = "q";
+    q.innerHTML = `<p class="stem">${stem}</p><div class="opts">${opts.map((o,i)=>`<button type="button" data-i="${i}">${o}</button>`).join("")}</div><p class="fb" aria-live="polite"></p>`;
+    q.querySelectorAll(".opts button").forEach(b => b.addEventListener("click", () => {
+      const right = +b.dataset.i === ans, fb = q.querySelector(".fb");
+      q.querySelectorAll(".opts button").forEach(x => x.classList.remove("right","wrong")); b.classList.add(right ? "right" : "wrong");
+      fb.className = "fb " + (right ? "right" : "wrong"); fb.innerHTML = right ? `Correct. <span>${why}</span>` : "Not quite, try again.";
+    }));
+    box.appendChild(q);
+  });
+});
+</script>
+</body>
+</html>
