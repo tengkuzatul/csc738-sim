@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSC738 Weeks 6–7: Deep learning for images</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ===== Edit these links each semester (see CONFIG in the script at the bottom too) ===== */
+:root{
+  --ink:#24253A; --muted:#5E5F75; --paper:#F7F7FB; --panel:#FFFFFF; --line:#DCDCE8;
+  --brand:#4B4C8F; --brand-soft:#ECECF5; --classA:#4B4C8F; --classB:#C2701F; --ok:#2E7D4F; --bad:#B23A3A;
+  --focus:#1D6FA5;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --ink:#E7E7F2; --muted:#A9AAC2; --paper:#16172A; --panel:#1F2038; --line:#34365A;
+    --brand:#9EA0E8; --brand-soft:#2A2B4A; --classA:#8E90E0; --classB:#E39B52; --ok:#6CC08F; --bad:#E07A7A; --focus:#7FB8E6;
+    color-scheme: dark; }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} *{transition:none!important} }
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Source Sans 3",Arial,sans-serif;font-size:18px;line-height:1.55}
+a{color:var(--brand)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+header.top{padding:40px 0 8px}
+.course{color:var(--muted);font-weight:600;margin:0 0 6px}
+h1{font-size:44px;line-height:1.1;margin:0 0 14px;letter-spacing:-0.01em}
+h2{font-size:30px;line-height:1.2;margin:0 0 8px}
+h3{font-size:21px;margin:22px 0 6px}
+p{margin:0 0 12px;max-width:72ch}
+.lead{font-size:20px;color:var(--muted);max-width:64ch}
+code,.mono{font-family:"JetBrains Mono","Courier New",monospace;font-size:0.88em}
+
+/* Explorer: the one bold element */
+.explorer{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:28px;align-items:start;margin:28px 0 12px}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px}
+canvas{display:block;width:100%;height:auto;border-radius:10px;touch-action:none}
+.controls{display:flex;flex-direction:column;gap:16px}
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg button{font:inherit;font-size:16px;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--paper)}
+label.ctl{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:16px}
+label.ctl span.val{font-weight:400;color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--brand)}
+.scores{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.score{background:var(--brand-soft);border-radius:12px;padding:10px 14px}
+.score b{display:block;font-size:28px;line-height:1.1}
+.score small{color:var(--muted);font-size:14px}
+.hint{font-size:16px;color:var(--muted);background:var(--panel);border-left:4px solid var(--brand);padding:10px 14px;border-radius:0 10px 10px 0}
+.legend{display:flex;gap:18px;font-size:15px;color:var(--muted);margin-top:8px}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+
+/* Progress */
+.progress{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px 24px;margin:28px 0}
+.progress ol{margin:10px 0 0;padding-left:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px 24px}
+.progress li label{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:16px}
+.progress input{margin-top:5px;accent-color:var(--brand);width:18px;height:18px}
+.bar{height:10px;background:var(--brand-soft);border-radius:999px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;width:0;background:var(--brand);transition:width .3s}
+
+/* Units */
+nav.units{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 0}
+nav.units a{font-size:15px;text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:4px 12px;color:var(--ink);background:var(--panel)}
+section.unit{border-top:1px solid var(--line);padding:44px 0 20px}
+.unit-head{display:flex;gap:16px;align-items:baseline}
+.num{font-weight:700;color:var(--brand);font-size:30px;min-width:1.6em}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;margin-top:16px}
+.video{aspect-ratio:16/9;background:var(--brand-soft);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--muted);text-align:center;padding:16px;overflow:hidden}
+.video iframe{width:100%;height:100%;border:0}
+.slides{aspect-ratio:16/9;background:var(--brand-soft);border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--muted);margin-top:14px}
+.slides.pdf{aspect-ratio:auto;height:min(80vh,760px)}
+.slides iframe{width:100%;height:100%;border:0}
+ul.key{margin:0;padding-left:20px} ul.key li{margin-bottom:6px}
+.demo{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-top:18px}
+.demo h3{margin-top:0}
+.out{font-size:20px;font-weight:700}
+.out.A{color:var(--classA)} .out.B{color:var(--classB)}
+svg text{font-family:"Source Sans 3",Arial,sans-serif}
+.demo svg{max-width:620px;display:block}
+
+/* Quiz */
+.quiz{margin-top:18px}
+.q{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-bottom:12px}
+.q p.stem{font-weight:600;margin-bottom:10px}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opts button{text-align:left;font:inherit;font-size:17px;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer}
+.opts button.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--panel))}
+.opts button.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--panel))}
+.fb{margin-top:10px;font-size:16px}
+.fb.right{color:var(--ok)} .fb.wrong{color:var(--bad)}
+.fb span{color:var(--ink)}
+
+table.cmp{border-collapse:collapse;width:100%;font-size:16px;margin-top:12px}
+table.cmp th,table.cmp td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+table.cmp th{color:var(--muted);font-weight:600}
+.tablewrap{overflow-x:auto}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 20px}
+textarea{width:100%;min-height:110px;font:inherit;font-size:16px;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.btn{display:inline-block;font:inherit;font-weight:600;padding:10px 18px;border-radius:10px;background:var(--brand);color:var(--paper);text-decoration:none;border:0;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--brand);border:1px solid var(--brand)}
+footer{color:var(--muted);font-size:15px;padding:40px 0 60px;border-top:1px solid var(--line);margin-top:40px}
+
+@media (max-width:860px){
+  h1{font-size:34px}
+  .explorer,.grid2,.cards{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <p class="course">CSC738 Advanced Machine Learning, Weeks 6–7 self-study</p>
+  <h1>Deep learning for images: from neurons to detectors</h1>
+  <p class="lead">Watch a small neural network learn right in your browser. Change its size and learning rate, and see the decision boundary and the training curves change. Then work through CNNs, transfer learning, architectures, object detection and evaluation.</p>
+</header>
+
+<div class="explorer" id="explorer">
+  <div class="stage">
+    <canvas id="cv" width="560" height="560" aria-label="Decision regions of a small neural network being trained on two classes"></canvas>
+    <div class="legend"><span><i class="dot" style="background:var(--classA)"></i>Class A</span><span><i class="dot" style="background:var(--classB)"></i>Class B</span><span>Hollow points: validation data</span></div>
+  </div>
+  <div class="controls">
+    <div>
+      <p style="font-weight:600;margin-bottom:6px">Data shape</p>
+      <div class="seg" id="dataSeg" role="group" aria-label="Choose a dataset">
+        <button data-d="blobs" aria-pressed="false">Two groups</button>
+        <button data-d="moons" aria-pressed="true">Moons</button>
+        <button data-d="circles" aria-pressed="false">Circles</button>
+      </div>
+    </div>
+    <label class="ctl">Hidden neurons <span class="val" id="hVal">8</span><input type="range" id="hid" min="1" max="32" value="8"></label>
+    <label class="ctl">Learning rate <span class="val" id="lrVal">0.3</span><input type="range" id="lr" min="0" max="5" step="1" value="2"></label>
+    <div class="scores">
+      <div class="score"><b id="ep">0</b><small>Epochs</small></div>
+      <div class="score"><b id="vAcc">–</b><small>Validation accuracy</small></div>
+    </div>
+    <svg id="lossSvg" viewBox="0 0 320 130" width="100%" role="img" aria-label="Training and validation loss over epochs"></svg>
+    <p style="display:flex;gap:10px;flex-wrap:wrap;margin:0"><button class="btn" id="play">Train</button><button class="btn ghost" id="reset">Reset weights</button></p>
+    <p class="hint" id="hint">Press Train. With 1 hidden neuron the network can only draw a straight line; with 8 it can bend around the moons.</p>
+  </div>
+</div>
+
+<section class="progress" aria-labelledby="progTitle">
+  <h2 id="progTitle">Your plan for these two weeks</h2>
+  <p>About 4 to 5 hours in total. Tick each step as you finish it; your ticks are saved in this browser only.</p>
+  <div class="bar" aria-hidden="true"><i id="barFill"></i></div>
+  <p id="progText" style="font-size:15px;color:var(--muted);margin-top:6px"></p>
+  <ol id="checklist"></ol>
+  <nav class="units" aria-label="Jump to a topic">
+    <a href="#slides">Slides</a><a href="#nn">Neural networks</a><a href="#cnn">CNN</a><a href="#tl">Transfer learning</a><a href="#arch">Architectures</a><a href="#det">Object detection</a><a href="#eval">Evaluation</a><a href="#practice">Lab</a>
+  </nav>
+</section>
+
+<section class="unit" id="slides">
+  <h2>Lecture slides</h2>
+  <p>Week 6 covers Parts 1–3; Week 7 covers Parts 4–6. Skim the slides first, then come back to them as you work through each topic.</p>
+  <div class="slides" id="slideBox"></div>
+  <p id="slideLink" style="margin-top:10px"></p>
+</section>
+
+<section class="unit" id="nn">
+  <div class="unit-head"><span class="num">1</span><h2>Neural networks and training <small style="font-size:16px;color:var(--muted)">Week 6</small></h2></div>
+  <div class="grid2">
+    <div class="video" data-video="nn"></div>
+    <div>
+      <ul class="key">
+        <li>A neuron computes a weighted sum plus a bias, then an activation (ReLU in hidden layers, softmax at the output).</li>
+        <li>Learning loop: forward pass → loss → backpropagation → weight update.</li>
+        <li>Optimisers: SGD, SGD with momentum, Adam. The learning rate is the most important setting.</li>
+        <li>Regularisation: dropout, data augmentation, early stopping, weight decay.</li>
+      </ul>
+      <p class="hint">In the explorer: set the learning rate to 3 and press Train. The loss jumps around instead of falling smoothly. Then try 0.01: it barely moves.</p>
+    </div>
+  </div>
+  <div class="demo">
+    <h3>Try it: one neuron by hand</h3>
+    <p>Inputs x₁ = 1 and x₂ = 2. Move the weights and bias and see the output after ReLU and after sigmoid.</p>
+    <label class="ctl">w₁ <span class="val" id="w1Val">0.5</span><input type="range" id="w1" min="-2" max="2" step="0.1" value="0.5"></label>
+    <label class="ctl">w₂ <span class="val" id="w2Val">-0.3</span><input type="range" id="w2" min="-2" max="2" step="0.1" value="-0.3"></label>
+    <label class="ctl">bias b <span class="val" id="bVal">0.2</span><input type="range" id="bb" min="-2" max="2" step="0.1" value="0.2"></label>
+    <p class="mono" id="neuronOut"></p>
+  </div>
+  <div class="quiz" data-quiz="nn"></div>
+</section>
+
+<section class="unit" id="cnn">
+  <div class="unit-head"><span class="num">2</span><h2>Convolutional Neural Networks <small style="font-size:16px;color:var(--muted)">Week 6</small></h2></div>
+  <div class="grid2">
+    <div class="video" data-video="cnn"></div>
+    <div>
+      <ul class="key">
+        <li>A filter (kernel) slides across the image: multiply and add gives one value of the feature map.</li>
+        <li>The same filter is used everywhere (weight sharing), so far fewer weights than a dense network.</li>
+        <li>ReLU keeps positive responses; max pooling halves the size and keeps the strongest signal.</li>
+        <li>Flatten → dense layers → softmax gives the class probabilities.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="demo">
+    <h3>Try it: convolution and max pooling</h3>
+    <p>The 8 × 8 image shows a bright square. Choose a filter, then hover over or tap a cell of the feature map to see its calculation.</p>
+    <div class="seg" id="kSeg" role="group" aria-label="Choose a filter" style="margin-bottom:12px">
+      <button data-k="v" aria-pressed="true">Vertical edges</button><button data-k="h" aria-pressed="false">Horizontal edges</button><button data-k="blur" aria-pressed="false">Blur</button><button data-k="sharp" aria-pressed="false">Sharpen</button>
+    </div>
+    <svg id="convSvg" viewBox="0 0 700 300" style="max-width:700px" width="100%" role="img" aria-label="Input image, the filter, the feature map after ReLU, and the max-pooled map"></svg>
+    <p class="mono" id="convCalc" style="min-height:3em"></p>
+  </div>
+  <div class="demo">
+    <h3>Try it: output size calculator</h3>
+    <p class="mono">Output = (W − F + 2P) / S + 1</p>
+    <div class="scores" style="grid-template-columns:repeat(4,1fr)">
+      <label class="ctl">W (input) <input type="number" id="cW" value="224" min="1" style="font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink)"></label>
+      <label class="ctl">F (filter) <input type="number" id="cF" value="3" min="1" style="font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink)"></label>
+      <label class="ctl">P (padding) <input type="number" id="cP" value="1" min="0" style="font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink)"></label>
+      <label class="ctl">S (stride) <input type="number" id="cS" value="1" min="1" style="font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink)"></label>
+    </div>
+    <p style="margin-top:10px">Output size: <span class="out" id="cOut">–</span></p>
+  </div>
+  <div class="quiz" data-quiz="cnn"></div>
+</section>
+
+<section class="unit" id="tl">
+  <div class="unit-head"><span class="num">3</span><h2>Transfer learning and fine-tuning <small style="font-size:16px;color:var(--muted)">Week 6</small></h2></div>
+  <div class="grid2">
+    <div class="video" data-video="tl"></div>
+    <div>
+      <ul class="key">
+        <li>Start from a network pre-trained on ImageNet instead of random weights.</li>
+        <li>1. Load the base, 2. freeze it, 3. add and train a new head.</li>
+        <li>4. Fine-tune: unfreeze the top layers and train with a very small learning rate (e.g. 0.00001).</li>
+        <li>Works well with a few hundred images per class.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="demo">
+    <h3>Try it: which strategy fits my project?</h3>
+    <p>Choose your situation to see the recommended strategy.</p>
+    <p style="font-weight:600;margin-bottom:6px">How many labelled images do you have?</p>
+    <div class="seg" id="tlSize" role="group" aria-label="Dataset size"><button data-v="small" aria-pressed="true">Small (hundreds per class)</button><button data-v="large" aria-pressed="false">Large (thousands per class)</button></div>
+    <p style="font-weight:600;margin:12px 0 6px">How similar are your images to everyday photos (ImageNet)?</p>
+    <div class="seg" id="tlSim" role="group" aria-label="Similarity to ImageNet"><button data-v="similar" aria-pressed="true">Similar (leaves, food, animals)</button><button data-v="different" aria-pressed="false">Different (X-rays, satellite, spectrograms)</button></div>
+    <div class="card" style="margin-top:14px"><h3 style="margin-top:0" id="tlTitle"></h3><p id="tlText" style="margin:0"></p></div>
+  </div>
+  <div class="quiz" data-quiz="tl"></div>
+</section>
+
+<section class="unit" id="arch">
+  <div class="unit-head"><span class="num">4</span><h2>Heavy-weight vs light-weight CNNs <small style="font-size:16px;color:var(--muted)">Week 7</small></h2></div>
+  <div class="grid2">
+    <div class="video" data-video="arch"></div>
+    <div>
+      <ul class="key">
+        <li>Heavy (VGG16, ResNet50, InceptionV3): more parameters, usually for servers with GPUs.</li>
+        <li>Light (MobileNetV2, EfficientNet-B0, SqueezeNet): designed for phones and edge devices.</li>
+        <li>Variations: bilinear, multi-scale, multi-view and multi-region CNNs.</li>
+        <li>Always compare accuracy together with size and speed.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="demo">
+    <h3>Try it: will it fit on the device?</h3>
+    <p>Bars show each model's size if its weights are stored as 32-bit numbers (parameters × 4 bytes). Move the slider to set the memory budget of a device.</p>
+    <svg id="sizeSvg" viewBox="0 0 640 300" width="100%" role="img" aria-label="Model sizes in megabytes compared with a memory budget"></svg>
+    <label class="ctl">Memory budget (MB) <span class="val" id="budVal">50</span><input type="range" id="bud" min="5" max="600" step="5" value="50"></label>
+    <p id="sizeText"></p>
+  </div>
+  <div class="quiz" data-quiz="arch"></div>
+</section>
+
+<section class="unit" id="det">
+  <div class="unit-head"><span class="num">5</span><h2>Object detection and recognition <small style="font-size:16px;color:var(--muted)">Week 7</small></h2></div>
+  <div class="grid2">
+    <div class="video" data-video="det"></div>
+    <div>
+      <ul class="key">
+        <li>Classification gives one label; detection gives many boxes, each with a label and a confidence.</li>
+        <li>Two-stage (R-CNN, Fast R-CNN, Faster R-CNN): propose regions, then classify. More accurate, slower.</li>
+        <li>One-stage (YOLO, SSD, RetinaNet): boxes and classes in one pass. Fast enough for video.</li>
+        <li>Segmentation: FCN and U-Net (every pixel), Mask R-CNN (a mask per object).</li>
+      </ul>
+    </div>
+  </div>
+  <div class="demo">
+    <h3>Try it: non-maximum suppression (NMS)</h3>
+    <p>A detector predicted five boxes around two leaves. NMS keeps the most confident box, removes any box that overlaps it by more than the IoU threshold, and repeats.</p>
+    <svg id="nmsSvg" viewBox="0 0 620 300" width="100%" role="img" aria-label="Candidate boxes around two objects; kept boxes are solid, removed boxes dashed"></svg>
+    <label class="ctl">NMS IoU threshold <span class="val" id="nmsVal">0.50</span><input type="range" id="nms" min="0.1" max="0.9" step="0.05" value="0.5"></label>
+    <p id="nmsText"></p>
+  </div>
+  <div class="quiz" data-quiz="det"></div>
+</section>
+
+<section class="unit" id="eval">
+  <div class="unit-head"><span class="num">6</span><h2>Evaluating deep learning models <small style="font-size:16px;color:var(--muted)">Week 7</small></h2></div>
+  <div class="grid2">
+    <div class="video" data-video="eval"></div>
+    <div>
+      <ul class="key">
+        <li>Classification: confusion matrix, per-class recall, macro F1, training curves, Grad-CAM.</li>
+        <li>Detection: IoU decides whether a box is correct; precision, recall and mAP summarise it.</li>
+        <li>mAP@0.5 uses IoU ≥ 0.5; mAP@0.5:0.95 averages stricter thresholds too.</li>
+        <li>Also report model size, inference time and robustness.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="demo">
+    <h3>Try it: IoU of a predicted box</h3>
+    <p>The purple box is the ground truth (100 × 100). Move the orange predicted box and change its size.</p>
+    <svg id="iouSvg" viewBox="120 30 400 270" width="100%" role="img" aria-label="Ground-truth box and predicted box with their overlap shaded"></svg>
+    <label class="ctl">Shift right (px) <span class="val" id="dxVal">50</span><input type="range" id="dx" min="0" max="120" value="50"></label>
+    <label class="ctl">Shift down (px) <span class="val" id="dyVal">0</span><input type="range" id="dy" min="0" max="120" value="0"></label>
+    <label class="ctl">Predicted box size (px) <span class="val" id="szVal">100</span><input type="range" id="sz" min="40" max="160" value="100"></label>
+    <p>IoU = <span class="out" id="iouOut">–</span> &nbsp;<span id="iouVerdict"></span></p>
+  </div>
+  <div class="quiz" data-quiz="eval"></div>
+</section>
+
+<section class="unit" id="practice">
+  <div class="unit-head"><span class="num">7</span><h2>Practise in the lab and reflect</h2></div>
+  <p>Now apply these ideas in the Weeks 6–7 lab, using Google Colab with a GPU (Runtime › Change runtime type › T4 GPU). The transfer learning code is a starting point for the Group Project.</p>
+  <p style="display:flex;gap:12px;flex-wrap:wrap">
+    <a class="btn" id="labLink" href="#">Open Google Colab</a>
+    <a class="btn ghost" id="sheetLink" href="#">Download the lab sheet</a>
+  </p>
+  <h3>Reflection (stays on this device)</h3>
+  <p>Which topic is still unclear, and how will you use these ideas in your Group Project?</p>
+  <textarea id="reflect" aria-label="Your reflection"></textarea>
+</section>
+
+<section class="unit" id="ufuture">
+  <div class="unit-head"><span class="num">8</span><h2>Discuss in i-Discuss (UFuture)</h2></div>
+  <p>Post your answers to the lab activities in the Weeks 6–7 topic of i-Discuss on UFuture, together with your reflection.</p>
+</section>
+
+<footer>CSC738 Advanced Machine Learning. Self-study material for Weeks 6–7: Supervised Learning III–IV (Deep Learning Methods).</footer>
+</div>
+
+<script>
+/* ===================== LECTURER: EDIT THESE LINKS ===================== */
+const CONFIG = {
+  // Paste YouTube links, or leave "" to show a placeholder.
+  videos: { nn:"", cnn:"", tl:"", arch:"", det:"", eval:"" },
+  // Slides: a PDF in the same repository (e.g. "week6_7_slides.pdf") or a Google Slides link.
+  slidesUrl: "",
+  labUrl: "",      // Google Colab link to the Weeks 6-7 notebook
+  sheetUrl: ""     // e.g. "week6_7_lab.docx" uploaded to the same repository
+};
+/* ===================================================================== */
+
+const $ = s => document.querySelector(s);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+function ytEmbed(url){ const m = url.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/); return m ? "https://www.youtube-nocookie.com/embed/" + m[1] : null; }
+document.querySelectorAll(".video").forEach(el => {
+  const url = CONFIG.videos[el.dataset.video] || "", src = url && ytEmbed(url);
+  if (src) el.innerHTML = `<iframe src="${src}" title="Video: ${el.closest("section").querySelector("h2").textContent}" allowfullscreen loading="lazy"></iframe>`;
+  else el.textContent = "Video link will be added by your lecturer.";
+});
+for (const [id, url] of [["#labLink", CONFIG.labUrl], ["#sheetLink", CONFIG.sheetUrl]]) {
+  const a = $(id); if (!a) continue;
+  if (url) { a.href = url; a.target = "_blank"; a.rel = "noopener"; }
+  else { a.removeAttribute("href"); a.setAttribute("aria-disabled", "true"); a.style.opacity = .5; a.title = "Link will be added by your lecturer"; }
+}
+(function(){
+  const url = CONFIG.slidesUrl.trim(), box = $("#slideBox"), link = $("#slideLink");
+  if (!url){ box.textContent = "Slides will be added by your lecturer."; return; }
+  let src = url; const isPdf = /\.pdf($|[?#])/i.test(url);
+  const g = url.match(/docs\.google\.com\/presentation\/d\/(?:e\/)?([\w-]+)/);
+  if (g) src = url.includes("/d/e/") ? url.replace(/\/pub.*$/, "/embed?start=false&loop=false") : `https://docs.google.com/presentation/d/${g[1]}/embed?start=false&loop=false`;
+  if (isPdf) box.classList.add("pdf");
+  box.innerHTML = `<iframe src="${src}" title="Weeks 6-7 lecture slides" loading="lazy" allowfullscreen></iframe>`;
+  link.innerHTML = `<a href="${url}" target="_blank" rel="noopener">Open the slides in a new tab</a>${isPdf ? " (best on phones)" : ""}`;
+})();
+
+/* ---------- Checklist ---------- */
+const KEY = "csc738w67";
+const STEPS = ["Train the network in the explorer (15 min)","Skim the lecture slides (40 min)","1 Neural networks: video, demo, check (30 min)","2 CNN: video, demos, check (30 min)","3 Transfer learning: video, demo, check (20 min)","4 Architectures: video, demo, check (20 min)","5 Object detection: video, demo, check (25 min)","6 Evaluation: video, demo, check (20 min)","Weeks 6–7 lab in Colab (60–90 min)","Post in i-Discuss with your reflection (10 min)"];
+const ol = $("#checklist");
+STEPS.forEach((s, i) => {
+  const li = document.createElement("li");
+  li.innerHTML = `<label><input type="checkbox" ${store.get(KEY+"-done", []).includes(i) ? "checked" : ""}><span>${s}</span></label>`;
+  li.querySelector("input").addEventListener("change", e => {
+    const set = new Set(store.get(KEY+"-done", [])); e.target.checked ? set.add(i) : set.delete(i);
+    store.set(KEY+"-done", [...set]); updateBar();
+  });
+  ol.appendChild(li);
+});
+function updateBar(){ const n = store.get(KEY+"-done", []).length; $("#barFill").style.width = (100*n/STEPS.length)+"%"; $("#progText").textContent = `${n} of ${STEPS.length} steps done`; }
+updateBar();
+const ta = $("#reflect"); ta.value = store.get(KEY+"-reflect", ""); ta.addEventListener("input", () => store.set(KEY+"-reflect", ta.value));
+
+/* ---------- Neural network explorer ---------- */
+let seed = 3;
+function rand(){ seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+function gauss(){ let u = 0, v = 0; while(!u) u = rand(); while(!v) v = rand(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+function makeData(kind){
+  const pts = [], s = 0.12;
+  for (let i = 0; i < 200; i++){
+    const c = i % 2; let x, y;
+    if (kind === "blobs"){ x = (c ? 0.65 : 0.35) + gauss()*s; y = (c ? 0.6 : 0.4) + gauss()*s; }
+    else if (kind === "moons"){ const t = Math.PI*rand(); const X = c ? 1 - Math.cos(t) : Math.cos(t), Y = c ? 0.5 - Math.sin(t) : Math.sin(t);
+      x = (X + 1.2)/3.4 + gauss()*s*0.4; y = (Y + 0.8)/2.1 + gauss()*s*0.4; }
+    else { const t = 2*Math.PI*rand(), r = c ? 0.36 : 0.14; x = 0.5 + r*Math.cos(t) + gauss()*s*0.45; y = 0.5 + r*Math.sin(t) + gauss()*s*0.45; }
+    pts.push({x:Math.min(.98,Math.max(.02,x)), y:Math.min(.98,Math.max(.02,y)), c, val: rand() < 0.3});
+  }
+  return pts;
+}
+const LRS = [0.01, 0.1, 0.3, 1, 3, 10];
+const st = { data:"moons", H:8, lr:0.3, epoch:0, running:false, hist:[] };
+let pts = makeData(st.data), net;
+function initNet(){
+  const H = st.H, r = () => (rand()*2-1);
+  net = { W1: Array.from({length:H}, () => [r()*2, r()*2]), b1: Array.from({length:H}, () => r()*0.5), W2: Array.from({length:H}, () => r()), b2: 0 };
+  st.epoch = 0; st.hist = [];
+}
+function fwd(x, y){
+  const h = net.W1.map((w,j) => Math.tanh(w[0]*(x-.5)*4 + w[1]*(y-.5)*4 + net.b1[j]));
+  const z = h.reduce((a,v,j) => a + v*net.W2[j], net.b2);
+  return { h, p: 1/(1+Math.exp(-z)) };
+}
+function loss(set){ let L = 0; for (const p of set){ const q = Math.min(1-1e-7, Math.max(1e-7, fwd(p.x,p.y).p)); L -= p.c ? Math.log(q) : Math.log(1-q); } return L/set.length; }
+function step(){
+  const tr = pts.filter(p=>!p.val), H = st.H, gW1 = net.W1.map(()=>[0,0]), gb1 = Array(H).fill(0), gW2 = Array(H).fill(0); let gb2 = 0;
+  for (const p of tr){
+    const ux = (p.x-.5)*4, uy = (p.y-.5)*4, {h, p:q} = fwd(p.x,p.y), d = q - p.c;
+    gb2 += d;
+    for (let j = 0; j < H; j++){ gW2[j] += d*h[j]; const dh = d*net.W2[j]*(1-h[j]*h[j]); gW1[j][0] += dh*ux; gW1[j][1] += dh*uy; gb1[j] += dh; }
+  }
+  const n = tr.length, lr = st.lr;
+  for (let j = 0; j < H; j++){ net.W2[j] -= lr*gW2[j]/n; net.W1[j][0] -= lr*gW1[j][0]/n; net.W1[j][1] -= lr*gW1[j][1]/n; net.b1[j] -= lr*gb1[j]/n; }
+  net.b2 -= lr*gb2/n; st.epoch++;
+}
+const cv = $("#cv"), ctx = cv.getContext("2d");
+function draw(){
+  const W = cv.width, G = 70, cell = W/G, A = css("--classA"), B = css("--classB");
+  const rgb = h => { h = h.replace("#",""); return [0,2,4].map(i => parseInt(h.substr(i,2),16)); };
+  const P = rgb(css("--panel")), cA = rgb(A), cB = rgb(B);
+  for (let i = 0; i < G; i++) for (let j = 0; j < G; j++){
+    const p = fwd((i+.5)/G, 1-(j+.5)/G).p, a = 0.12 + 0.3*Math.abs(p-.5)*2, c = p >= .5 ? cB : cA;
+    ctx.fillStyle = `rgb(${c.map((v,k)=>Math.round(P[k]*(1-a)+v*a)).join(",")})`;
+    ctx.fillRect(Math.floor(i*cell), Math.floor(j*cell), Math.ceil(cell)+1, Math.ceil(cell)+1);
+  }
+  for (const p of pts){
+    ctx.beginPath(); ctx.arc(p.x*W, (1-p.y)*W, 6, 0, 2*Math.PI);
+    if (p.val){ ctx.lineWidth = 3; ctx.strokeStyle = p.c ? B : A; ctx.fillStyle = css("--panel"); ctx.fill(); ctx.stroke(); }
+    else { ctx.fillStyle = p.c ? B : A; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = css("--panel"); ctx.stroke(); }
+  }
+  const va = pts.filter(p=>p.val), acc = va.filter(p => (fwd(p.x,p.y).p >= .5 ? 1 : 0) === p.c).length / va.length;
+  $("#ep").textContent = st.epoch; $("#vAcc").textContent = Math.round(acc*100) + "%";
+  drawLoss();
+}
+function drawLoss(){
+  const h = st.hist, Wd = 320, Hd = 130;
+  if (!h.length){ $("#lossSvg").innerHTML = `<text x="10" y="70" font-size="13" fill="${css("--muted")}">Loss curves appear here while training</text>`; return; }
+  const mx = Math.max(...h.slice(0,3).flat(), 0.05) * 1.05, n = Math.max(h.length, 30);
+  const X = i => 30 + i*(Wd-40)/(n-1), Y = v => Hd - 18 - Math.min(v,mx)/mx*(Hd-30);
+  const line = k => h.map((v,i) => `${X(i).toFixed(1)},${Y(v[k]).toFixed(1)}`).join(" ");
+  $("#lossSvg").innerHTML = `<line x1="30" y1="${Hd-18}" x2="${Wd-10}" y2="${Hd-18}" stroke="${css("--line")}"/>
+    <polyline points="${line(0)}" fill="none" stroke="${css("--classA")}" stroke-width="2.5"/>
+    <polyline points="${line(1)}" fill="none" stroke="${css("--classB")}" stroke-width="2.5"/>
+    <text x="30" y="12" font-size="12" fill="${css("--classA")}">training loss</text><text x="130" y="12" font-size="12" fill="${css("--classB")}">validation loss</text>
+    <text x="${Wd-10}" y="${Hd-4}" font-size="11" text-anchor="end" fill="${css("--muted")}">epochs</text>`;
+}
+function tick(){
+  if (!st.running) return;
+  for (let k = 0; k < 10; k++) step();
+  const tr = pts.filter(p=>!p.val), va = pts.filter(p=>p.val), l = [loss(tr), loss(va)];
+  if (st.epoch % 20 === 0 || st.hist.length < 5) st.hist.push(l);
+  if (!isFinite(l[0])) { st.running = false; $("#play").textContent = "Train"; $("#hint").textContent = "The loss exploded: the learning rate is far too large. Lower it and press Reset weights."; }
+  draw();
+  if (st.epoch >= 3000){ st.running = false; $("#play").textContent = "Train"; return; }
+  requestAnimationFrame(tick);
+}
+$("#play").addEventListener("click", () => { st.running = !st.running; $("#play").textContent = st.running ? "Pause" : "Train"; if (st.running) requestAnimationFrame(tick); });
+$("#reset").addEventListener("click", () => { initNet(); draw(); });
+document.querySelectorAll("#dataSeg button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("#dataSeg button").forEach(x => x.setAttribute("aria-pressed", x === b)); st.data = b.dataset.d; pts = makeData(st.data); initNet(); draw(); }));
+$("#hid").addEventListener("input", e => { st.H = +e.target.value; $("#hVal").textContent = st.H; initNet(); draw();
+  $("#hint").textContent = st.H === 1 ? "One hidden neuron can only draw a straight-ish boundary: underfitting on Moons and Circles." : st.H >= 24 ? "Many neurons: the boundary can become very flexible. Watch whether validation loss starts to rise." : "Press Train and watch the boundary bend to fit the data."; });
+$("#lr").addEventListener("input", e => { st.lr = LRS[+e.target.value]; $("#lrVal").textContent = st.lr; });
+initNet(); draw();
+
+/* ---------- One neuron ---------- */
+function neuron(){
+  const w1 = +$("#w1").value, w2 = +$("#w2").value, b = +$("#bb").value;
+  $("#w1Val").textContent = w1.toFixed(1); $("#w2Val").textContent = w2.toFixed(1); $("#bVal").textContent = b.toFixed(1);
+  const z = w1*1 + w2*2 + b;
+  $("#neuronOut").innerHTML = `z = ${w1.toFixed(1)}×1 + (${w2.toFixed(1)})×2 + ${b.toFixed(1)} = <b>${z.toFixed(2)}</b><br>ReLU(z) = max(0, z) = <b>${Math.max(0,z).toFixed(2)}</b><br>sigmoid(z) = 1 / (1 + e<sup>−z</sup>) = <b>${(1/(1+Math.exp(-z))).toFixed(3)}</b>`;
+}
+["#w1","#w2","#bb"].forEach(s => $(s).addEventListener("input", neuron)); neuron();
+
+/* ---------- Convolution ---------- */
+const IMG = Array.from({length:8}, (_,r) => Array.from({length:8}, (_,c) => (r>=2 && r<=5 && c>=2 && c<=5) ? 9 : 1));
+const KER = { v:[[-1,0,1],[-1,0,1],[-1,0,1]], h:[[-1,-1,-1],[0,0,0],[1,1,1]], blur:[[1,1,1],[1,1,1],[1,1,1]].map(r=>r.map(v=>v/9)), sharp:[[0,-1,0],[-1,5,-1],[0,-1,0]] };
+let kname = "v", sel = [2,1];
+function conv(){
+  const K = KER[kname], out = [];
+  for (let r = 0; r < 6; r++){ out.push([]); for (let c = 0; c < 6; c++){ let s = 0; for (let i=0;i<3;i++) for (let j=0;j<3;j++) s += IMG[r+i][c+j]*K[i][j]; out[r].push(Math.max(0, s)); } }
+  return out;
+}
+const fmt = v => Number.isInteger(v) ? v : v.toFixed(1);
+function convDraw(){
+  const K = KER[kname], out = conv(), pool = [0,1,2].map(r => [0,1,2].map(c => Math.max(out[2*r][2*c], out[2*r][2*c+1], out[2*r+1][2*c], out[2*r+1][2*c+1])));
+  const mx = Math.max(1, ...out.flat()), brand = css("--brand"), ink = css("--ink"), line = css("--line"), panel = css("--panel"), org = css("--classB");
+  const cell = (x,y,s,v,shade,hl) => `<rect x="${x}" y="${y}" width="${s}" height="${s}" fill="${shade}" stroke="${hl?org:line}" stroke-width="${hl?3:1}"/><text x="${x+s/2}" y="${y+s/2+5}" font-size="${s>30?13:11}" text-anchor="middle" fill="${ink}">${fmt(v)}</text>`;
+  const gray = v => { const t = Math.round(255 - v/9*150); return `rgb(${t},${t},${t+8})`; };
+  let s = `<text x="10" y="18" font-size="14" fill="${css("--muted")}">Input image (8 × 8)</text>`;
+  for (let r=0;r<8;r++) for (let c=0;c<8;c++){ const hl = r>=sel[0] && r<sel[0]+3 && c>=sel[1] && c<sel[1]+3; s += cell(10+c*30, 28+r*30, 30, IMG[r][c], gray(IMG[r][c]), hl); }
+  s += `<text x="270" y="18" font-size="14" fill="${css("--muted")}">Filter</text>`;
+  for (let i=0;i<3;i++) for (let j=0;j<3;j++) s += cell(270+j*30, 28+i*30, 30, K[i][j], css("--brand-soft"), false);
+  s += `<text x="380" y="18" font-size="14" fill="${css("--muted")}">Feature map after ReLU (6 × 6)</text>`;
+  for (let r=0;r<6;r++) for (let c=0;c<6;c++){ const a = out[r][c]/mx; s += `<g class="fm" data-r="${r}" data-c="${c}" style="cursor:pointer">${cell(380+c*34, 28+r*34, 34, out[r][c], `color-mix(in srgb, ${brand} ${Math.round(a*70)}%, ${panel})`, r===sel[0]&&c===sel[1])}</g>`; }
+  s += `<text x="600" y="186" font-size="14" fill="${css("--muted")}">Max pool 2×2</text>`;
+  for (let r=0;r<3;r++) for (let c=0;c<3;c++) s += cell(600+c*30, 196+r*30, 30, pool[r][c], css("--brand-soft"), false);
+  $("#convSvg").innerHTML = s;
+  document.querySelectorAll("#convSvg .fm").forEach(g => { const pick = () => { sel = [+g.dataset.r, +g.dataset.c]; convDraw(); }; g.addEventListener("mouseenter", pick); g.addEventListener("click", pick); });
+  const [r0,c0] = sel, terms = []; let sum = 0;
+  for (let i=0;i<3;i++) for (let j=0;j<3;j++){ terms.push(`${IMG[r0+i][c0+j]}×${fmt(K[i][j])}`); sum += IMG[r0+i][c0+j]*K[i][j]; }
+  $("#convCalc").innerHTML = `Cell (${r0+1}, ${c0+1}): ${terms.join(" + ")} = ${fmt(sum)} → ReLU → <b>${fmt(Math.max(0,sum))}</b>`;
+}
+document.querySelectorAll("#kSeg button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("#kSeg button").forEach(x => x.setAttribute("aria-pressed", x === b)); kname = b.dataset.k; convDraw(); }));
+convDraw();
+function outSize(){
+  const W = +$("#cW").value, F = +$("#cF").value, P = +$("#cP").value, S = +$("#cS").value, v = (W - F + 2*P)/S + 1;
+  $("#cOut").textContent = (S > 0 && F > 0) ? (Number.isInteger(v) ? `${v} × ${v}` : `${v.toFixed(2)} (not a whole number: this combination does not fit evenly)`) : "–";
+}
+["#cW","#cF","#cP","#cS"].forEach(s => $(s).addEventListener("input", outSize)); outSize();
+
+/* ---------- Transfer learning advisor ---------- */
+const tl = { size:"small", sim:"similar" };
+const TL = {
+  "small-similar":["Feature extraction (freeze the base)","Freeze the whole pre-trained base and train only a new head. With little data, training more layers risks overfitting. Example: a few hundred rice-leaf images per class with MobileNetV2."],
+  "small-different":["Feature extraction, then careful fine-tuning","Start with a frozen base, then unfreeze only the top few layers with a very small learning rate and strong augmentation. Earlier layers (edges, textures) still transfer; later ImageNet-specific layers may not."],
+  "large-similar":["Fine-tune more of the network","With plenty of similar data, unfreeze many layers (or the whole base) and fine-tune with a small learning rate for the best accuracy."],
+  "large-different":["Fine-tune the whole network, or train from scratch","With lots of very different data, fine-tune all layers, or compare with a custom CNN trained from scratch. Pre-trained weights are still often a better starting point than random ones."]
+};
+function tlDraw(){ const [t,x] = TL[`${tl.size}-${tl.sim}`]; $("#tlTitle").textContent = t; $("#tlText").textContent = x; }
+[["#tlSize","size"],["#tlSim","sim"]].forEach(([id,k]) => document.querySelectorAll(`${id} button`).forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(`${id} button`).forEach(x => x.setAttribute("aria-pressed", x === b)); tl[k] = b.dataset.v; tlDraw(); })));
+tlDraw();
+
+/* ---------- Model sizes ---------- */
+const MODELS = [["VGG16",138],["ResNet50",25.6],["InceptionV3",23.9],["DenseNet121",8.1],["EfficientNet-B0",5.3],["MobileNetV2",3.5],["SqueezeNet",1.2]];
+function sizeDraw(){
+  const bud = +$("#bud").value; $("#budVal").textContent = bud;
+  const maxMB = 560, X = mb => 150 + Math.min(mb, maxMB)/maxMB*460;
+  let s = "", fits = [];
+  MODELS.forEach(([n,p],i) => { const mb = p*4, ok = mb <= bud; if (ok) fits.push(n); const y = 14 + i*38;
+    s += `<text x="140" y="${y+19}" font-size="14" text-anchor="end" fill="${css("--ink")}">${n}</text><rect x="150" y="${y}" width="${Math.max(2, X(mb)-150)}" height="26" rx="4" fill="${ok?css("--brand"):css("--line")}"/><text x="${mb>400 ? X(mb)-6 : X(mb)+6}" y="${y+19}" font-size="13" ${mb>400?'text-anchor="end"':""} fill="${mb>400?css("--ink"):css("--muted")}">${mb.toFixed(0)} MB</text>`; });
+  s += `<line x1="${X(bud)}" y1="6" x2="${X(bud)}" y2="284" stroke="${css("--classB")}" stroke-width="3" stroke-dasharray="7 5"/><text x="${Math.min(X(bud)+6, 560)}" y="296" font-size="13" fill="${css("--classB")}">budget</text>`;
+  $("#sizeSvg").innerHTML = s;
+  $("#sizeText").textContent = fits.length ? `Fits within ${bud} MB: ${fits.join(", ")}. Quantising weights to 8 bits would make each model about 4 times smaller.` : `No model fits within ${bud} MB without compression such as quantisation.`;
+}
+$("#bud").addEventListener("input", sizeDraw); sizeDraw();
+
+/* ---------- IoU and NMS ---------- */
+function iouOf(a, b){ const ix = Math.max(0, Math.min(a.x+a.w, b.x+b.w) - Math.max(a.x, b.x)), iy = Math.max(0, Math.min(a.y+a.h, b.y+b.h) - Math.max(a.y, b.y)), I = ix*iy; return I / (a.w*a.h + b.w*b.h - I); }
+function iouDraw(){
+  const dx = +$("#dx").value, dy = +$("#dy").value, sz = +$("#sz").value; $("#dxVal").textContent = dx; $("#dyVal").textContent = dy; $("#szVal").textContent = sz;
+  const g = {x:180, y:60, w:100, h:100}, p = {x:180+dx, y:60+dy, w:sz, h:sz}, v = iouOf(g,p);
+  const ix0 = Math.max(g.x,p.x), iy0 = Math.max(g.y,p.y), ix1 = Math.min(g.x+g.w,p.x+p.w), iy1 = Math.min(g.y+g.h,p.y+p.h), S = 1.0;
+  $("#iouSvg").innerHTML = `<rect x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" fill="${css("--classA")}" fill-opacity="0.18" stroke="${css("--classA")}" stroke-width="3"/>
+    <rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" fill="${css("--classB")}" fill-opacity="0.15" stroke="${css("--classB")}" stroke-width="3"/>
+    ${ix1>ix0 && iy1>iy0 ? `<rect x="${ix0}" y="${iy0}" width="${ix1-ix0}" height="${iy1-iy0}" fill="${css("--ink")}" fill-opacity="0.25"/>` : ""}
+    <text x="${g.x}" y="${g.y-8}" font-size="14" fill="${css("--classA")}">ground truth</text><text x="${p.x+p.w}" y="${p.y+p.h+18}" font-size="14" text-anchor="end" fill="${css("--classB")}">prediction</text>`;
+  $("#iouOut").textContent = v.toFixed(2);
+  $("#iouVerdict").textContent = v >= 0.5 ? "True positive at IoU threshold 0.5 (counts for mAP@0.5)" : "False positive at IoU threshold 0.5";
+}
+["#dx","#dy","#sz"].forEach(s => $(s).addEventListener("input", iouDraw)); iouDraw();
+const CAND = [{x:60,y:70,w:150,h:140,s:0.92},{x:75,y:60,w:150,h:150,s:0.81},{x:40,y:90,w:160,h:130,s:0.66},{x:330,y:80,w:170,h:150,s:0.88},{x:360,y:100,w:160,h:140,s:0.55}];
+function nmsDraw(){
+  const t = +$("#nms").value; $("#nmsVal").textContent = t.toFixed(2);
+  const order = CAND.map((b,i)=>i).sort((a,b) => CAND[b].s - CAND[a].s), keep = [], removed = new Set();
+  for (const i of order){ if (removed.has(i)) continue; keep.push(i); for (const j of order) if (j !== i && !removed.has(j) && !keep.includes(j) && iouOf(CAND[i], CAND[j]) > t) removed.add(j); }
+  let s = "";
+  CAND.forEach((b,i) => { const k = keep.includes(i), col = k ? css("--classB") : css("--muted");
+    s += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" fill="none" stroke="${col}" stroke-width="${k?3.5:1.5}" ${k?"":'stroke-dasharray="6 5"'}/>${k ? `<text x="${b.x+6}" y="${b.y+20}" font-size="15" font-weight="700" fill="${col}">leaf ${b.s.toFixed(2)}</text>` : ""}`; });
+  $("#nmsSvg").innerHTML = s;
+  const rem = CAND.filter((b,i)=>!keep.includes(i)).map(b=>b.s.toFixed(2)); $("#nmsText").textContent = `Kept ${keep.length} box${keep.length===1?"":"es"} (solid); removed ${rem.length ? "the boxes with confidence " + rem.join(", ") : "none"} (dashed). ${keep.length > 2 ? "The threshold is too high: duplicate boxes survive." : keep.length === 2 ? "One box per leaf: about right." : "The threshold is too low: a box for a real object was removed."}`;
+}
+$("#nms").addEventListener("input", nmsDraw); nmsDraw();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { draw(); convDraw(); sizeDraw(); iouDraw(); nmsDraw(); });
+
+/* ---------- Quick checks ---------- */
+const QUIZ = {
+ nn:[["Training loss keeps falling, but validation loss starts rising after epoch 12. What should you do?",["Train for more epochs","Use early stopping or more regularisation","Increase the learning rate","Remove the validation set"],1,"Rising validation loss with falling training loss is overfitting; early stopping keeps the best epoch."],
+     ["Which activation is normally used in the output layer for a 5-class problem?",["ReLU","Sigmoid","Softmax","Linear"],2,"Softmax turns the outputs into probabilities that add up to 1 across the classes."],
+     ["The loss jumps up and down and sometimes explodes. The most likely cause is:",["The learning rate is too large","Too much data","Dropout is too small","The batch size is 32"],0,"Large steps overshoot the minimum; lower the learning rate."]],
+ cnn:[["A 32 × 32 image, a 5 × 5 filter, padding 0 and stride 1 give an output of:",["32 × 32","28 × 28","27 × 27","16 × 16"],1,"(32 − 5 + 0)/1 + 1 = 28."],
+      ["What does 2 × 2 max pooling with stride 2 do to a 28 × 28 feature map?",["Makes it 56 × 56","Makes it 14 × 14","Keeps it 28 × 28","Makes it 26 × 26"],1,"It keeps the largest value in each 2 × 2 window, halving each side."],
+      ["Why do CNNs need far fewer weights than a fully connected network on images?",["They use no weights","The same small filter is shared across the whole image","They only use grayscale","They skip backpropagation"],1,"Weight sharing: one 3 × 3 filter has 9 weights wherever it is applied."]],
+ tl:[["When fine-tuning a pre-trained network, the learning rate should be:",["Much larger than usual","Very small, e.g. 0.00001","Exactly 1","Random"],1,"Large updates would destroy the useful features the base already learned."],
+     ["You have 300 images per class of plant leaves. The best first strategy is:",["Train a deep CNN from scratch","Transfer learning with a frozen pre-trained base","Use no validation set","Use only a fully connected network"],1,"With small, ImageNet-like data, a frozen pre-trained base plus a new head works well."]],
+ arch:[["Which model is designed for phones and edge devices?",["VGG16","ResNet50","MobileNetV2","InceptionV3"],2,"MobileNetV2 uses depthwise separable convolutions and has about 3.5 million parameters."],
+       ["Model A is 0.4% more accurate than Model B but 20 times larger. For a mobile app you should:",["Always choose A","Consider B, and report accuracy together with size and speed","Report only accuracy","Choose neither"],1,"Practical deployment depends on size and speed as well as accuracy."]],
+ det:[["What is the main difference between YOLO and Faster R-CNN?",["YOLO predicts boxes in one pass; Faster R-CNN proposes regions first","YOLO only classifies images","Faster R-CNN cannot draw boxes","They are the same"],0,"One-stage detectors skip the separate region-proposal step, so they are faster."],
+      ["Labelling every pixel of each separate object (each cat outlined separately) is:",["Image classification","Semantic segmentation","Instance segmentation","Localisation"],2,"Instance segmentation gives a separate mask per object, e.g. with Mask R-CNN."],
+      ["What does non-maximum suppression do?",["Adds more boxes","Removes duplicate boxes that overlap a more confident box","Resizes the image","Trains the detector"],1,"It keeps the most confident box for each object."]],
+ eval:[["Two 100 × 100 boxes overlap in a 50 × 100 strip. Their IoU is:",["0.50","0.33","0.25","0.67"],1,"Overlap 5,000 / union 15,000 = 0.33."],
+       ["mAP@0.5:0.95 is usually lower than mAP@0.5 because:",["It uses fewer classes","It also requires boxes to match at stricter IoU thresholds","It ignores recall","It is calculated on training data"],1,"Averaging over thresholds up to 0.95 rewards precise boxes."],
+       ["Which tool shows which image regions drove a CNN's prediction?",["Grad-CAM","Dropout","Softmax","Max pooling"],0,"Grad-CAM produces a heat map of the regions that most influenced the class score."]]
+};
+document.querySelectorAll(".quiz").forEach(box => {
+  box.insertAdjacentHTML("beforeend", `<h3>Check your understanding</h3>`);
+  QUIZ[box.dataset.quiz].forEach(([stem, opts, ans, why]) => {
+    const q = document.createElement("div"); q.className = "q";
+    q.innerHTML = `<p class="stem">${stem}</p><div class="opts">${opts.map((o,i)=>`<button type="button" data-i="${i}">${o}</button>`).join("")}</div><p class="fb" aria-live="polite"></p>`;
+    q.querySelectorAll(".opts button").forEach(b => b.addEventListener("click", () => {
+      const right = +b.dataset.i === ans, fb = q.querySelector(".fb");
+      q.querySelectorAll(".opts button").forEach(x => x.classList.remove("right","wrong")); b.classList.add(right ? "right" : "wrong");
+      fb.className = "fb " + (right ? "right" : "wrong"); fb.innerHTML = right ? `Correct. <span>${why}</span>` : "Not quite, try again.";
+    }));
+    box.appendChild(q);
+  });
+});
+</script>
+</body>
+</html>
