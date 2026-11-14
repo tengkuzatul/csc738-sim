@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSC738 Advanced Machine Learning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1F2230; --muted:#5C6070; --paper:#FBFAF7; --rule:#DEDBD2; --accent:#1F5E8C; --night:#0B1A2C;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --ink:#E8E6E0; --muted:#A4A8B4; --paper:#14171D; --rule:#2E333D; --accent:#7DB4DE; --night:#0B1A2C; color-scheme: dark; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Source Sans 3",Arial,sans-serif;font-size:18px;line-height:1.6}
+a{color:var(--accent)}
+a:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.banner{background:var(--night);position:relative;line-height:0}
+.banner video{display:block;width:100%;max-width:1440px;max-height:78vh;aspect-ratio:16/9;object-fit:contain;margin:0 auto;background:var(--night)}
+.vctl{position:absolute;right:16px;bottom:16px;display:flex;gap:8px;line-height:1.2}
+.vctl button,.vctl a{font:inherit;font-size:14px;font-weight:600;padding:7px 12px;border-radius:6px;border:1px solid rgba(255,255,255,.45);background:rgba(11,26,44,.72);color:#F2F4F7;cursor:pointer;text-decoration:none}
+.vctl button:hover,.vctl a:hover{background:rgba(11,26,44,.92)}
+.wrap{max-width:860px;margin:0 auto;padding:0 24px}
+.meta{display:flex;flex-wrap:wrap;gap:4px 28px;padding:18px 0;border-bottom:1px solid var(--rule);font-size:15px;color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600}
+h1,h2{font-family:"Source Serif 4",Georgia,serif;font-weight:600;letter-spacing:-0.005em}
+h1{font-size:34px;line-height:1.2;margin:36px 0 10px}
+h2{font-size:24px;margin:44px 0 6px}
+p{margin:0 0 14px;max-width:68ch}
+.intro{color:var(--muted)}
+ol.units{list-style:none;margin:16px 0 0;padding:0;border-top:1px solid var(--rule)}
+ol.units li{display:grid;grid-template-columns:110px 1fr auto;gap:16px;align-items:baseline;padding:14px 0;border-bottom:1px solid var(--rule)}
+.wk{white-space:nowrap;font-size:14px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.title a{font-weight:600;text-decoration:none;color:var(--ink)}
+.title a:hover{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.title small{display:block;color:var(--muted);font-size:15px}
+.state{font-size:14px;color:var(--muted)}
+.state.open{color:var(--accent);font-weight:600}
+li.later .title{color:var(--muted)}
+.how{margin:12px 0 0;padding-left:20px}
+.how li{margin-bottom:6px}
+footer{margin:56px 0 0;padding:20px 0 48px;border-top:1px solid var(--rule);font-size:14px;color:var(--muted)}
+@media (max-width:600px){
+  h1{font-size:28px}
+  ol.units li{grid-template-columns:1fr auto;gap:2px 12px}
+  .wk{grid-column:1 / -1}
+}
+</style>
+</head>
+<body>
+
+<div class="banner">
+  <video id="hero" src="banner.mp4" poster="banner-poster.jpg" autoplay muted loop playsinline preload="metadata"
+    aria-label="Welcome video: the lecturer introduces CSC738 Advanced Machine Learning"></video>
+  <div class="vctl">
+    <button type="button" id="sound" aria-pressed="false">Sound on</button>
+    <button type="button" id="pause" aria-pressed="false">Pause</button>
+    <a href="#units">Go to units</a>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="meta">
+    <span><b>CSC738</b> Advanced Machine Learning</span>
+    <span>Semester October 2026 – February 2027</span>
+    <span>Lecturer: Dr Tengku Zatul Hidayah</span>
+    <span>College of Computing, Informatics and Mathematics, UiTM</span>
+  </div>
+
+  <h1>Self-study units</h1>
+  <p class="intro">This course runs in blended mode. Each unit below brings together the lecture slides, short videos, interactive demos and the lab for that week, so you can study at your own pace before or after class.</p>
+
+  <h2 id="units">Weekly units</h2>
+  <ol class="units">
+    <li><span class="wk">Week 4</span><span class="title"><a href="week4.html">How classifiers work</a><small>Supervised Learning I: Logistic Regression, SVM, trees, ensembles</small></span><span class="state open">Open</span></li>
+    <li><span class="wk">Week 5</span><span class="title"><a href="week5.html">Regression and forecasting</a><small>Supervised Learning II: regression, time series, evaluation, pitfalls</small></span><span class="state open">Open</span></li>
+    <li><span class="wk">Weeks 6–7</span><span class="title"><a href="week6-7.html">Deep learning for images</a><small>Supervised Learning III–IV: neural networks, CNN, transfer learning, detection</small></span><span class="state open">Open</span></li>
+    <li class="later"><span class="wk">Week 8</span><span class="title">Sequence models for text and speech<small>RNN, LSTM, attention and Transformers</small></span><span class="state">Coming soon</span></li>
+    <li class="later"><span class="wk">Weeks 9–10</span><span class="title">Unsupervised learning<small>Clustering, dimensionality reduction, autoencoders, GANs</small></span><span class="state">Coming soon</span></li>
+    <li class="later"><span class="wk">Week 11</span><span class="title">Reinforcement learning<small>Markov decision processes, Q-learning, deep RL</small></span><span class="state">Coming soon</span></li>
+  </ol>
+
+  <h2>How to use a unit</h2>
+  <ol class="how">
+    <li>Work through the page from top to bottom, and tick each step in the checklist as you finish it.</li>
+    <li>Try every demo: predict what will happen before you change a setting.</li>
+    <li>Do the lab in Google Colab, then post your answers and reflection in i-Discuss on UFuture.</li>
+  </ol>
+  <p class="intro" style="margin-top:14px">Your checklist ticks and reflections are saved only in your own browser. Post questions about the material in i-Discuss, so everyone benefits from the answers.</p>
+
+  <footer>CSC738 Advanced Machine Learning · Universiti Teknologi MARA · Course materials for registered students.</footer>
+</div>
+<script>
+const v = document.getElementById("hero"), snd = document.getElementById("sound"), pz = document.getElementById("pause");
+if (matchMedia("(prefers-reduced-motion: reduce)").matches){ v.removeAttribute("autoplay"); v.pause(); pz.textContent = "Play"; }
+snd.addEventListener("click", () => { v.muted = !v.muted; if (!v.muted) v.play(); snd.textContent = v.muted ? "Sound on" : "Sound off"; snd.setAttribute("aria-pressed", !v.muted); });
+pz.addEventListener("click", () => { v.paused ? v.play() : v.pause(); });
+v.addEventListener("play", () => { pz.textContent = "Pause"; }); v.addEventListener("pause", () => { pz.textContent = "Play"; });
+</script>
+</body>
+</html>
