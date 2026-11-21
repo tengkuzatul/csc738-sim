@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CSC738 Week 8: Sequence models and Transformers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ===== Edit these links each semester (see CONFIG in the script at the bottom too) ===== */
+:root{
+  --ink:#24253A; --muted:#5E5F75; --paper:#F7F7FB; --panel:#FFFFFF; --line:#DCDCE8;
+  --brand:#4B4C8F; --brand-soft:#ECECF5; --classA:#4B4C8F; --classB:#C2701F; --ok:#2E7D4F; --bad:#B23A3A;
+  --focus:#1D6FA5;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --ink:#E7E7F2; --muted:#A9AAC2; --paper:#16172A; --panel:#1F2038; --line:#34365A;
+    --brand:#9EA0E8; --brand-soft:#2A2B4A; --classA:#8E90E0; --classB:#E39B52; --ok:#6CC08F; --bad:#E07A7A; --focus:#7FB8E6;
+    color-scheme: dark; }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto} *{transition:none!important} }
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Source Sans 3",Arial,sans-serif;font-size:18px;line-height:1.55}
+a{color:var(--brand)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+header.top{padding:40px 0 8px}
+.course{color:var(--muted);font-weight:600;margin:0 0 6px}
+h1{font-size:44px;line-height:1.1;margin:0 0 14px;letter-spacing:-0.01em}
+h2{font-size:30px;line-height:1.2;margin:0 0 8px}
+h3{font-size:21px;margin:22px 0 6px}
+p{margin:0 0 12px;max-width:72ch}
+.lead{font-size:20px;color:var(--muted);max-width:64ch}
+code,.mono{font-family:"JetBrains Mono","Courier New",monospace;font-size:0.88em}
+
+/* Explorer: the one bold element */
+.explorer{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:28px;align-items:start;margin:28px 0 12px}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px}
+canvas{display:block;width:100%;height:auto;border-radius:10px;touch-action:none}
+.controls{display:flex;flex-direction:column;gap:16px}
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg button{font:inherit;font-size:16px;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--paper)}
+label.ctl{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:16px}
+label.ctl span.val{font-weight:400;color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--brand)}
+.scores{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.score{background:var(--brand-soft);border-radius:12px;padding:10px 14px}
+.score b{display:block;font-size:28px;line-height:1.1}
+.score small{color:var(--muted);font-size:14px}
+.hint{font-size:16px;color:var(--muted);background:var(--panel);border-left:4px solid var(--brand);padding:10px 14px;border-radius:0 10px 10px 0}
+.legend{display:flex;gap:18px;font-size:15px;color:var(--muted);margin-top:8px}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+
+/* Progress */
+.progress{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px 24px;margin:28px 0}
+.progress ol{margin:10px 0 0;padding-left:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px 24px}
+.progress li label{display:flex;gap:10px;align-items:flex-start;cursor:pointer;font-size:16px}
+.progress input{margin-top:5px;accent-color:var(--brand);width:18px;height:18px}
+.bar{height:10px;background:var(--brand-soft);border-radius:999px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;width:0;background:var(--brand);transition:width .3s}
+
+/* Units */
+nav.units{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 0}
+nav.units a{font-size:15px;text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:4px 12px;color:var(--ink);background:var(--panel)}
+section.unit{border-top:1px solid var(--line);padding:44px 0 20px}
+.unit-head{display:flex;gap:16px;align-items:baseline}
+.num{font-weight:700;color:var(--brand);font-size:30px;min-width:1.6em}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;margin-top:16px}
+.video{aspect-ratio:16/9;background:var(--brand-soft);border-radius:14px;display:flex;align-items:center;justify-content:center;color:var(--muted);text-align:center;padding:16px;overflow:hidden}
+.video iframe{width:100%;height:100%;border:0}
+.slides{aspect-ratio:16/9;background:var(--brand-soft);border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--muted);margin-top:14px}
+.slides.pdf{aspect-ratio:auto;height:min(80vh,760px)}
+.slides iframe{width:100%;height:100%;border:0}
+ul.key{margin:0;padding-left:20px} ul.key li{margin-bottom:6px}
+.demo{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-top:18px}
+.demo h3{margin-top:0}
+.out{font-size:20px;font-weight:700}
+.out.A{color:var(--classA)} .out.B{color:var(--classB)}
+svg text{font-family:"Source Sans 3",Arial,sans-serif}
+.demo svg{max-width:620px;display:block}
+
+/* Quiz */
+.quiz{margin-top:18px}
+.q{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-bottom:12px}
+.q p.stem{font-weight:600;margin-bottom:10px}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opts button{text-align:left;font:inherit;font-size:17px;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer}
+.opts button.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,var(--panel))}
+.opts button.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--panel))}
+.fb{margin-top:10px;font-size:16px}
+.fb.right{color:var(--ok)} .fb.wrong{color:var(--bad)}
+.fb span{color:var(--ink)}
+
+table.cmp{border-collapse:collapse;width:100%;font-size:16px;margin-top:12px}
+table.cmp th,table.cmp td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+table.cmp th{color:var(--muted);font-weight:600}
+.tablewrap{overflow-x:auto}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 20px}
+textarea{width:100%;min-height:110px;font:inherit;font-size:16px;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.btn{display:inline-block;font:inherit;font-weight:600;padding:10px 18px;border-radius:10px;background:var(--brand);color:var(--paper);text-decoration:none;border:0;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--brand);border:1px solid var(--brand)}
+footer{color:var(--muted);font-size:15px;padding:40px 0 60px;border-top:1px solid var(--line);margin-top:40px}
+
+@media (max-width:860px){
+  h1{font-size:34px}
+  .explorer,.grid2,.cards{grid-template-columns:1fr}
+}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.chip{font-family:"JetBrains Mono","Courier New",monospace;font-size:15px;padding:4px 10px;border-radius:8px;background:var(--brand-soft);color:var(--ink)}
+.chip.pad{opacity:.45}
+.chip b{color:var(--brand)}
+input.txt{width:100%;font:inherit;font-size:17px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
+input.num{width:100%;max-width:110px;font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink)}
+.wbar{display:grid;grid-template-columns:90px 1fr 60px;gap:10px;align-items:center;margin:6px 0;font-size:16px}
+.wbar i{display:block;height:18px;border-radius:6px;background:var(--brand);transition:width .2s}
+.big{font-size:26px;font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <p class="course">CSC738 Advanced Machine Learning, Week 8 self-study</p>
+  <h1>Sequence models: how machines read text and speech</h1>
+  <p class="lead">Watch a tiny network read a review one word at a time. See how a plain RNN forgets early words, and how an LSTM keeps what matters. Then work through attention, Transformers, speech, and the challenges of supervised deep learning.</p>
+</header>
+
+<div class="explorer" id="explorer">
+  <div class="stage">
+    <svg id="rnnSvg" viewBox="0 0 640 380" width="100%" role="img" aria-label="Memory of the network after each word, and how much each word influences the final answer"></svg>
+    <div class="legend"><span><i class="dot" style="background:var(--classA)"></i>Positive memory</span><span><i class="dot" style="background:var(--classB)"></i>Negative memory</span><span>Grey bars: influence on the final answer</span></div>
+  </div>
+  <div class="controls">
+    <div>
+      <p style="font-weight:600;margin-bottom:6px">Model</p>
+      <div class="seg" id="mSeg" role="group" aria-label="Choose a model">
+        <button data-m="rnn" aria-pressed="true">Plain RNN</button>
+        <button data-m="lstm" aria-pressed="false">LSTM</button>
+      </div>
+    </div>
+    <div>
+      <p style="font-weight:600;margin-bottom:6px">Example review</p>
+      <div class="seg" id="exSeg" role="group" aria-label="Choose an example">
+        <button data-e="0" aria-pressed="true">Key word first</button>
+        <button data-e="1" aria-pressed="false">Changes its mind</button>
+        <button data-e="2" aria-pressed="false">Short</button>
+      </div>
+    </div>
+    <label class="ctl">Or type your own (English or Malay)<input class="txt" id="sent" type="text"></label>
+    <label class="ctl"><span id="memLbl">Memory weight wₕ</span> <span class="val" id="memVal">0.60</span><input type="range" id="mem" min="0" max="1" step="0.01" value="0.6"></label>
+    <div class="scores">
+      <div class="score"><b id="predOut">–</b><small>Prediction</small></div>
+      <div class="score"><b id="firstOut">–</b><small>Influence left of word 1</small></div>
+    </div>
+    <p style="display:flex;gap:10px;flex-wrap:wrap;margin:0"><button class="btn" id="playR">Read word by word</button><button class="btn ghost" id="allR">Show all</button></p>
+    <p class="hint" id="hintR"></p>
+  </div>
+</div>
+
+<section class="progress" aria-labelledby="progTitle">
+  <h2 id="progTitle">Your plan for this week</h2>
+  <p>About 4 hours in total. Tick each step as you finish it; your ticks are saved in this browser only.</p>
+  <div class="bar" aria-hidden="true"><i id="barFill"></i></div>
+  <p id="progText" style="font-size:15px;color:var(--muted);margin-top:6px"></p>
+  <ol id="checklist"></ol>
+  <nav class="units" aria-label="Jump to a topic">
+    <a href="#slides">Slides</a><a href="#seq">Text as a sequence</a><a href="#rnn">RNN</a><a href="#lstm">LSTM and GRU</a><a href="#speech">Speech</a><a href="#attn">Attention</a><a href="#tf">Transformers</a><a href="#chal">Challenges</a><a href="#practice">Lab</a>
+  </nav>
+</section>
+
+<section class="unit" id="slides">
+  <h2>Lecture slides</h2>
+  <p>Part 1 covers RNN, LSTM, GRU and speech; Part 2 covers attention and the Transformer; Part 3 covers the challenges of supervised deep learning. Skim the slides first, then come back to them as you work through each topic.</p>
+  <div class="slides" id="slideBox"></div>
+  <p id="slideLink" style="margin-top:10px"></p>
+</section>
+
+<section class="unit" id="seq">
+  <div class="unit-head"><span class="num">1</span><h2>Text as a sequence</h2></div>
+  <div class="grid2">
+    <div class="video" data-video="seq"></div>
+    <div>
+      <ul class="key">
+        <li>Bag of words counts words but loses order: "anjing gigit orang" and "orang gigit anjing" look the same.</li>
+        <li>N-grams keep a little order, but the table becomes huge and mostly empty.</li>
+        <li>Pipeline: text → tokens → index numbers → embedding vectors.</li>
+        <li>Padding makes sequences the same length; masking tells the model to ignore the padding.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="demo">
+    <h3>Try it: bag of words vs sequence</h3>
+    <p>Type two sentences with the same words in a different order.</p>
+    <div class="cards" style="margin-top:0">
+      <label class="ctl">Sentence A<input class="txt" id="bowA" type="text" value="anjing gigit orang"></label>
+      <label class="ctl">Sentence B<input class="txt" id="bowB" type="text" value="orang gigit anjing"></label>
+    </div>
+    <p id="bowOut" style="margin-top:12px"></p>
+  </div>
+  <div class="demo">
+    <h3>Try it: from text to numbers</h3>
+    <p>This is what TextVectorization does. ID 0 is padding and ID 1 is an unknown word. Change the maximum length to see padding and cutting.</p>
+    <input class="txt" id="tokIn" type="text" value="Great acting but the plot was slow">
+    <label class="ctl" style="margin-top:12px">Maximum length <span class="val" id="lenVal">10</span><input type="range" id="tokLen" min="3" max="16" value="10"></label>
+    <p style="font-weight:600;margin:10px 0 0">Tokens</p><div class="chips" id="tokChips"></div>
+    <p style="font-weight:600;margin:6px 0 0">Index numbers (what the Embedding layer receives)</p><div class="chips" id="idChips"></div>
+    <p id="tokNote" style="font-size:16px;color:var(--muted)"></p>
+  </div>
+  <div class="quiz" data-quiz="seq"></div>
+</section>
+
+<section class="unit" id="rnn">
+  <div class="unit-head"><span class="num">2</span><h2>Recurrent neural networks</h2></div>
+  <div class="grid2">
+    <div class="video" data-video="rnn"></div>
+    <div>
+      <ul class="key">
+        <li>An RNN reads one step at a time and keeps a hidden state hₜ, its memory.</li>
+        <li>hₜ = tanh(Wₓxₜ + Wₕhₜ₋₁ + b): what I see now plus what I remember.</li>
+        <li>The same weights are reused at every step, so any length works.</li>
+        <li>Training multiplies by Wₕ at every step backwards: gradients vanish (or explode), so early words are forgotten.</li>
+      </ul>
+      <p class="hint">In the explorer: choose Plain RNN and "Key word first". Move the memory weight from 0.6 to 0.95 and watch the influence of the first word.</p>
+    </div>
+  </div>
+  <div class="demo">
+    <h3>Try it: an RNN step by step</h3>
+    <p>A tiny RNN with one hidden number and h₀ = 0. Change the weights and the three inputs.</p>
+    <div class="scores" style="grid-template-columns:repeat(auto-fill,minmax(90px,1fr))">
+      <label class="ctl">wₓ <input class="num" type="number" id="rx" value="0.5" step="0.1"></label>
+      <label class="ctl">wₕ <input class="num" type="number" id="rh" value="0.8" step="0.1"></label>
+      <label class="ctl">x₁ <input class="num" type="number" id="x1" value="1" step="0.1"></label>
+      <label class="ctl">x₂ <input class="num" type="number" id="x2" value="0.5" step="0.1"></label>
+      <label class="ctl">x₃ <input class="num" type="number" id="x3" value="-1" step="0.1"></label>
+    </div>
+    <div class="tablewrap"><table class="cmp" id="stepTbl"></table></div>
+  </div>
+  <div class="demo">
+    <h3>Try it: vanishing and exploding</h3>
+    <p>Each step back in time multiplies the signal by about wₕ. How much is left after n steps?</p>
+    <label class="ctl">wₕ <span class="val" id="vwVal">0.8</span><input type="range" id="vw" min="0.5" max="1.3" step="0.05" value="0.8"></label>
+    <label class="ctl">Number of steps n <span class="val" id="vnVal">20</span><input type="range" id="vn" min="1" max="100" value="20"></label>
+    <p>wₕⁿ = <span class="out" id="vOut">–</span> &nbsp;<span id="vVerdict"></span></p>
+  </div>
+  <div class="quiz" data-quiz="rnn"></div>
+</section>
+
+<section class="unit" id="lstm">
+  <div class="unit-head"><span class="num">3</span><h2>LSTM, GRU and bidirectional RNNs</h2></div>
+  <div class="grid2">
+    <div class="video" data-video="lstm"></div>
+    <div>
+      <ul class="key">
+        <li>LSTM adds a cell state, a conveyor belt of memory, controlled by 3 gates: forget, input, output.</li>
+        <li>cₜ = f × cₜ₋₁ + i × c̃ₜ. If f = 1, memory is kept, so gradients survive much longer.</li>
+        <li>GRU has 2 gates (update, reset), no separate cell state, about 25% fewer weights. Accuracy is usually similar.</li>
+        <li>Bidirectional: read forwards and backwards (not for real-time). Stacked: return_sequences=True on every layer except the last.</li>
+      </ul>
+      <p class="hint">In the explorer: switch to LSTM. Its input gate ignores neutral words like "the" and "was", so the key word is not washed out.</p>
+    </div>
+  </div>
+  <div class="demo">
+    <h3>Try it: one LSTM memory update</h3>
+    <p>"Ali went to the market. Later, Siti arrived…" Try the presets, then move the gates yourself.</p>
+    <div class="seg" id="gSeg" role="group" aria-label="Gate presets" style="margin-bottom:12px">
+      <button data-g="keep" aria-pressed="true">Keep "Ali"</button><button data-g="replace" aria-pressed="false">Replace with "Siti"</button><button data-g="erase" aria-pressed="false">Erase everything</button>
+    </div>
+    <label class="ctl">Old memory cₜ₋₁ <span class="val" id="gcVal"></span><input type="range" id="gc" min="-1" max="1" step="0.05"></label>
+    <label class="ctl">Forget gate f <span class="val" id="gfVal"></span><input type="range" id="gf" min="0" max="1" step="0.05"></label>
+    <label class="ctl">Input gate i <span class="val" id="giVal"></span><input type="range" id="gi" min="0" max="1" step="0.05"></label>
+    <label class="ctl">New information c̃ₜ <span class="val" id="gnVal"></span><input type="range" id="gn" min="-1" max="1" step="0.05"></label>
+    <p class="mono" id="gOut"></p>
+  </div>
+  <div class="quiz" data-quiz="lstm"></div>
+</section>
+
+<section class="unit" id="speech">
+  <div class="unit-head"><span class="num">4</span><h2>Speech as a sequence</h2></div>
+  <div class="grid2">
+    <div class="video" data-video="speech"></div>
+    <div>
+      <ul class="key">
+        <li>A waveform has 16,000 samples per second: too many to use directly.</li>
+        <li>Cut it into 25 ms frames every 10 ms (about 100 frames per second), then compute a mel spectrogram or MFCC per frame.</li>
+        <li>Model: CNN + BiLSTM, or a Transformer. Classification is many-to-one, like sentiment.</li>
+        <li>Speech-to-text uses CTC loss to align frames with letters. Today: fine-tune wav2vec 2.0 or Whisper.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="demo">
+    <h3>Try it: how long is the sequence?</h3>
+    <p>Change the clip length and the frame settings.</p>
+    <label class="ctl">Clip length (seconds) <span class="val" id="sdVal">3</span><input type="range" id="sd" min="0.5" max="30" step="0.5" value="3"></label>
+    <label class="ctl">Hop between frames (ms) <span class="val" id="shVal">10</span><input type="range" id="sh" min="5" max="25" step="5" value="10"></label>
+    <svg id="wavSvg" viewBox="0 0 640 140" width="100%" role="img" aria-label="Waveform with frame windows marked"></svg>
+    <div class="scores" style="grid-template-columns:repeat(3,1fr)">
+      <div class="score"><b id="sSamp">–</b><small>Raw samples</small></div>
+      <div class="score"><b id="sFr">–</b><small>Frames (sequence length)</small></div>
+      <div class="score"><b id="sFeat">–</b><small>Numbers after 40 mel features</small></div>
+    </div>
+  </div>
+  <div class="quiz" data-quiz="speech"></div>
+</section>
+
+<section class="unit" id="attn">
+  <div class="unit-head"><span class="num">5</span><h2>Attention and self-attention</h2></div>
+  <div class="grid2">
+    <div class="video" data-video="attn"></div>
+    <div>
+      <ul class="key">
+        <li>Encoder–decoder RNNs squeeze a whole sentence into one vector: long sentences lose detail.</li>
+        <li>Attention lets each output word look back at all input words and choose where to focus.</li>
+        <li>Self-attention: words in one sentence look at each other. Query = what I look for, Key = what I offer, Value = what I pass on.</li>
+        <li>Attention(Q, K, V) = softmax(QKᵀ / √dₖ) V gives context-aware word vectors.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="demo">
+    <h3>Try it: self-attention for the word "bank"</h3>
+    <p>Pick a sentence and change the match scores (Q·K). Watch the softmax weights and the meaning of "bank".</p>
+    <div class="seg" id="aSeg" role="group" aria-label="Choose a sentence" style="margin-bottom:12px">
+      <button data-a="0" aria-pressed="true">the river bank</button><button data-a="1" aria-pressed="false">the bank loan</button>
+    </div>
+    <div id="aSliders"></div>
+    <p style="font-weight:600;margin:10px 0 6px">Key size dₖ</p>
+    <div class="seg" id="dSeg" role="group" aria-label="Key size"><button data-d="1" aria-pressed="false">1</button><button data-d="4" aria-pressed="true">4</button><button data-d="64" aria-pressed="false">64</button></div>
+    <div id="aBars" style="margin-top:14px"></div>
+    <p id="aOut"></p>
+  </div>
+  <div class="quiz" data-quiz="attn"></div>
+</section>
+
+<section class="unit" id="tf">
+  <div class="unit-head"><span class="num">6</span><h2>Transformers and pretrained models</h2></div>
+  <div class="grid2">
+    <div class="video" data-video="tf"></div>
+    <div>
+      <ul class="key">
+        <li>Transformer block: multi-head self-attention, feed-forward, residual connections and layer norm, repeated N times. Positional encoding adds word order.</li>
+        <li>Encoder only (BERT) for understanding; decoder only (GPT) for generating; encoder–decoder (T5, Whisper) for translation and speech-to-text.</li>
+        <li>Pretrain once on huge unlabelled data, then fine-tune with a small learning rate on your task.</li>
+        <li>Transformers are parallel and handle long-range context, but attention cost grows with n².</li>
+      </ul>
+    </div>
+  </div>
+  <div class="demo">
+    <h3>Try it: RNN steps vs attention comparisons</h3>
+    <p>An RNN needs n steps, one after another. Self-attention compares every token with every token: n × n, but all at once.</p>
+    <label class="ctl">Sequence length n (tokens) <span class="val" id="nlVal">128</span><input type="range" id="nl" min="0" max="7" step="1" value="2"></label>
+    <div class="scores" style="grid-template-columns:repeat(2,1fr)">
+      <div class="score"><b id="nRnn">–</b><small>RNN sequential steps</small></div>
+      <div class="score"><b id="nAtt">–</b><small>Attention comparisons per head, per layer</small></div>
+    </div>
+    <p id="nNote" style="margin-top:10px"></p>
+  </div>
+  <div class="demo">
+    <h3>Try it: which model should I start with?</h3>
+    <p style="font-weight:600;margin-bottom:6px">Task</p>
+    <div class="seg" id="cTask" role="group" aria-label="Task"><button data-v="cls" aria-pressed="true">Classify text</button><button data-v="gen" aria-pressed="false">Generate or summarise text</button><button data-v="asr" aria-pressed="false">Speech to text</button><button data-v="ts" aria-pressed="false">Sensor or time series</button></div>
+    <p style="font-weight:600;margin:12px 0 6px">Labelled data</p>
+    <div class="seg" id="cData" role="group" aria-label="Labelled data"><button data-v="small" aria-pressed="true">Small (hundreds to a few thousand)</button><button data-v="large" aria-pressed="false">Large (100,000+)</button></div>
+    <p style="font-weight:600;margin:12px 0 6px">Where will it run?</p>
+    <div class="seg" id="cDev" role="group" aria-label="Device"><button data-v="cloud" aria-pressed="true">Server or cloud GPU</button><button data-v="phone" aria-pressed="false">Phone or small device</button></div>
+    <div class="card" style="margin-top:14px"><h3 style="margin-top:0" id="cTitle"></h3><p id="cText" style="margin:0"></p></div>
+  </div>
+  <div class="quiz" data-quiz="tf"></div>
+</section>
+
+<section class="unit" id="chal">
+  <div class="unit-head"><span class="num">7</span><h2>Challenges of supervised deep learning</h2></div>
+  <div class="grid2">
+    <div class="video" data-video="chal"></div>
+    <div>
+      <ul class="key">
+        <li>Data: deep models need many labels; small data often favours simple models or pretrained ones. Watch class imbalance.</li>
+        <li>Generalisation: overfitting, domain shift (movie reviews → Manglish tweets), and fragile, overconfident predictions.</li>
+        <li>Compute: GPUs, latency, model size and energy. Report them, not only accuracy.</li>
+        <li>Trust: black-box decisions, bias learned from data, and privacy (PDPA).</li>
+      </ul>
+    </div>
+  </div>
+  <div class="demo">
+    <h3>Try it: the accuracy trap</h3>
+    <p>1,000 messages, some of them hate speech. A lazy model always predicts "not hate speech". Move the slider.</p>
+    <label class="ctl">Hate speech in the data <span class="val" id="imVal">5%</span><input type="range" id="im" min="1" max="50" value="5"></label>
+    <div class="scores" style="grid-template-columns:repeat(3,1fr)">
+      <div class="score"><b id="imAcc">–</b><small>Accuracy</small></div>
+      <div class="score"><b id="imRec">–</b><small>Recall for hate speech</small></div>
+      <div class="score"><b id="imF1">–</b><small>Macro F1</small></div>
+    </div>
+    <p id="imNote" style="margin-top:10px"></p>
+  </div>
+  <div class="quiz" data-quiz="chal"></div>
+</section>
+
+<section class="unit" id="practice">
+  <div class="unit-head"><span class="num">8</span><h2>Practise in the lab and reflect</h2></div>
+  <p>In the Week 8 lab you train an LSTM and fine-tune DistilBERT on the same text dataset, then compare accuracy, training time and model size. Use Google Colab with a GPU (Runtime › Change runtime type › T4 GPU).</p>
+  <p style="display:flex;gap:12px;flex-wrap:wrap">
+    <a class="btn" id="labLink" href="#">Open Google Colab</a>
+    <a class="btn ghost" id="sheetLink" href="#">Download the lab sheet</a>
+  </p>
+  <h3>Reflection (stays on this device)</h3>
+  <p>Which model would you use for your Group Project, and why? Which challenge from topic 7 is most likely in your project?</p>
+  <textarea id="reflect" aria-label="Your reflection"></textarea>
+</section>
+
+<section class="unit" id="ufuture">
+  <div class="unit-head"><span class="num">9</span><h2>Discuss in i-Discuss (UFuture)</h2></div>
+  <p>Post your answers to the lab activities in the Week 8 topic of i-Discuss on UFuture, together with your reflection.</p>
+</section>
+
+<footer>CSC738 Advanced Machine Learning. Self-study material for Week 8: Supervised Learning V (Deep Learning Methods): sequence models, attention and Transformers.</footer>
+</div>
+
+<script>
+/* ===================== LECTURER: EDIT THESE LINKS ===================== */
+const CONFIG = {
+  // Paste YouTube links, or leave "" to show a placeholder.
+  videos: { seq:"", rnn:"", lstm:"", speech:"", attn:"", tf:"", chal:"" },
+  // Slides: a PDF in the same repository (e.g. "week8_slides.pdf") or a Google Slides link.
+  slidesUrl: "",
+  labUrl: "",      // Google Colab link to the Week 8 notebook
+  sheetUrl: ""     // e.g. "week8_lab.docx" uploaded to the same repository
+};
+/* ===================================================================== */
+
+const $ = s => document.querySelector(s);
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const f2 = v => (Math.round(v*100)/100).toFixed(2);
+function seg(sel, cb){ document.querySelectorAll(sel+" button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(sel+" button").forEach(x => x.setAttribute("aria-pressed", x === b)); cb(b); })); }
+const pressed = sel => document.querySelector(sel+' button[aria-pressed="true"]');
+
+function ytEmbed(url){ const m = url.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/); return m ? "https://www.youtube-nocookie.com/embed/" + m[1] : null; }
+document.querySelectorAll(".video").forEach(el => {
+  const url = CONFIG.videos[el.dataset.video] || "", src = url && ytEmbed(url);
+  if (src) el.innerHTML = `<iframe src="${src}" title="Video: ${el.closest("section").querySelector("h2").textContent}" allowfullscreen loading="lazy"></iframe>`;
+  else el.textContent = "Video link will be added by your lecturer.";
+});
+for (const [id, url] of [["#labLink", CONFIG.labUrl], ["#sheetLink", CONFIG.sheetUrl]]) {
+  const a = $(id); if (!a) continue;
+  if (url) { a.href = url; a.target = "_blank"; a.rel = "noopener"; }
+  else { a.removeAttribute("href"); a.setAttribute("aria-disabled", "true"); a.style.opacity = .5; a.title = "Link will be added by your lecturer"; }
+}
+(function(){
+  const url = CONFIG.slidesUrl.trim(), box = $("#slideBox"), link = $("#slideLink");
+  if (!url){ box.textContent = "Slides will be added by your lecturer."; return; }
+  let src = url; const isPdf = /\.pdf($|[?#])/i.test(url);
+  const g = url.match(/docs\.google\.com\/presentation\/d\/(?:e\/)?([\w-]+)/);
+  if (g) src = url.includes("/d/e/") ? url.replace(/\/pub.*$/, "/embed?start=false&loop=false") : `https://docs.google.com/presentation/d/${g[1]}/embed?start=false&loop=false`;
+  if (isPdf) box.classList.add("pdf");
+  box.innerHTML = `<iframe src="${src}" title="Week 8 lecture slides" loading="lazy" allowfullscreen></iframe>`;
+  link.innerHTML = `<a href="${url}" target="_blank" rel="noopener">Open the slides in a new tab</a>${isPdf ? " (best on phones)" : ""}`;
+})();
+
+/* ---------- Checklist ---------- */
+const KEY = "csc738w8";
+const STEPS = ["Play with the RNN/LSTM explorer (15 min)","Skim the lecture slides (40 min)","1 Text as a sequence: video, demos, check (20 min)","2 RNN: video, demos, check (25 min)","3 LSTM and GRU: video, demo, check (25 min)","4 Speech: video, demo, check (15 min)","5 Attention: video, demo, check (25 min)","6 Transformers: video, demos, check (25 min)","7 Challenges: video, demo, check (20 min)","Week 8 lab in Colab (60–90 min)","Post in i-Discuss with your reflection (10 min)"];
+const ol = $("#checklist");
+STEPS.forEach((s, i) => {
+  const li = document.createElement("li");
+  li.innerHTML = `<label><input type="checkbox" ${store.get(KEY+"-done", []).includes(i) ? "checked" : ""}><span>${s}</span></label>`;
+  li.querySelector("input").addEventListener("change", e => {
+    const set = new Set(store.get(KEY+"-done", [])); e.target.checked ? set.add(i) : set.delete(i);
+    store.set(KEY+"-done", [...set]); updateBar();
+  });
+  ol.appendChild(li);
+});
+function updateBar(){ const n = store.get(KEY+"-done", []).length; $("#barFill").style.width = (100*n/STEPS.length)+"%"; $("#progText").textContent = `${n} of ${STEPS.length} steps done`; }
+updateBar();
+const ta = $("#reflect"); ta.value = store.get(KEY+"-reflect", ""); ta.addEventListener("input", () => store.set(KEY+"-reflect", ta.value));
+
+/* ---------- RNN / LSTM explorer ---------- */
+const LEX = {love:1,loved:1,great:1,excellent:1,amazing:1,brilliant:1,wonderful:1,best:.9,good:.8,enjoyed:.9,fun:.7,like:.6,liked:.6,nice:.7,beautiful:.8,
+  bad:-1,boring:-.9,slow:-.6,terrible:-1,awful:-1,worst:-1,hate:-1,hated:-1,poor:-.8,waste:-.9,dull:-.7,weak:-.6,disappointing:-.9,
+  bagus:.9,suka:.8,seronok:.9,hebat:1,cantik:.8,terbaik:1,teruk:-1,bosan:-.9,benci:-1,lambat:-.6,hampa:-.9};
+const EX = ["brilliant acting from the whole cast even though the story takes place in one small town over a single week",
+  "the first half was slow and boring but the ending was great and i loved it",
+  "a great film"];
+const R = { model:"rnn", wh:0.6, f:0.95, words:[], t:0, timer:null };
+const WX = 1.5;
+function tokens(s){ return s.toLowerCase().match(/[a-z']+/g) || []; }
+function runModel(){
+  const w = R.words, T = w.length, xs = w.map(t => LEX[t] || 0), hs = [], gates = [];
+  let h = 0, c = 0;
+  for (let t = 0; t < T; t++){
+    if (R.model === "rnn"){ h = Math.tanh(WX*xs[t] + R.wh*h); hs.push(h); }
+    else { const i = xs[t] !== 0 ? 1 : 0.05; gates.push(i); c = R.f*c + i*xs[t]; h = Math.tanh(1.5*c); hs.push(h); }
+  }
+  // influence of each word on the final hidden state (size of the gradient path)
+  const inf = xs.map((x, t) => {
+    let g;
+    if (R.model === "rnn"){ g = WX*(1 - hs[t]*hs[t]); for (let k = t+1; k < T; k++) g *= R.wh*(1 - hs[k]*hs[k]); }
+    else { g = gates[t] * Math.pow(R.f, T-1-t); }
+    return Math.abs(g);
+  });
+  // "influence left of word 1" independent of its sentiment: product of memory factors
+  let keep = 1; for (let k = 1; k < T; k++) keep *= R.model === "rnn" ? R.wh*(1 - hs[k]*hs[k]) : R.f;
+  return { xs, hs, inf, keep };
+}
+function drawRnn(){
+  const svg = $("#rnnSvg"), w = R.words, T = w.length, show = Math.min(R.t, T);
+  if (!T){ svg.innerHTML = `<text x="20" y="190" font-size="16" fill="${css("--muted")}">Type a sentence to start.</text>`; return; }
+  const { xs, hs, inf, keep } = runModel();
+  const W = 640, x0 = 40, cw = (W - 60)/T, mid = 130, H = 100, mx = Math.max(...inf.slice(0, show), 1e-9);
+  const A = css("--classA"), B = css("--classB"), M = css("--muted"), L = css("--line"), I = css("--ink");
+  let s = `<text x="${x0}" y="18" font-size="13" fill="${M}">Memory h after each word</text>
+    <line x1="${x0}" y1="${mid}" x2="${W-20}" y2="${mid}" stroke="${L}"/>
+    <text x="${W-20}" y="${mid-H+4}" font-size="12" text-anchor="end" fill="${M}">+1</text><text x="${W-20}" y="${mid+H}" font-size="12" text-anchor="end" fill="${M}">−1</text>
+    <text x="${x0}" y="262" font-size="13" fill="${M}">Influence on the final answer</text>`;
+  for (let t = 0; t < T; t++){
+    const cx = x0 + t*cw, bw = Math.max(3, cw*0.62), bx = cx + (cw-bw)/2, on = t < show;
+    if (on){
+      const h = hs[t], bh = Math.abs(h)*H;
+      s += `<rect x="${bx}" y="${h >= 0 ? mid-bh : mid}" width="${bw}" height="${Math.max(1,bh)}" rx="3" fill="${h >= 0 ? A : B}"/>`;
+      if (show === T){ const ih = 50*inf[t]/mx; s += `<rect x="${bx}" y="${320-ih}" width="${bw}" height="${Math.max(1,ih)}" rx="2" fill="${M}" opacity=".55"/>`; }
+    }
+    const fs = Math.min(13, cw*0.5), sent = xs[t] !== 0;
+    s += `<text x="${cx+cw/2}" y="345" font-size="${fs.toFixed(1)}" text-anchor="end" transform="rotate(-40 ${cx+cw/2} 345)" fill="${on ? (sent ? I : M) : L}" font-weight="${sent ? 700 : 400}">${esc(w[t])}</text>`;
+  }
+  if (show === T){
+    const p = 1/(1+Math.exp(-4*hs[T-1]));
+    $("#predOut").textContent = p > .6 ? "Positive" : p < .4 ? "Negative" : "Unsure";
+    $("#predOut").style.color = p > .6 ? A : p < .4 ? B : M;
+    $("#firstOut").textContent = keep < 0.001 ? "< 0.1%" : (keep*100).toFixed(keep < .1 ? 1 : 0) + "%";
+  } else { $("#predOut").textContent = "…"; $("#predOut").style.color = ""; $("#firstOut").textContent = "…"; }
+  svg.innerHTML = s;
+}
+function hintR(){
+  const e = pressed("#exSeg"), ex = e ? +e.dataset.e : -1;
+  let h;
+  if (R.model === "rnn") h = ex === 0 ? "The key word \"brilliant\" comes first. With a memory weight of 0.6 its influence fades to almost nothing after 20 neutral words. Try 0.95, then switch to LSTM." :
+    ex === 1 ? "The review starts negative and ends positive. The RNN mostly remembers the end, which works here, but only by luck." : "Short reviews are easy for a plain RNN: there is little to forget.";
+  else h = ex === 0 ? "The LSTM input gate ignores neutral words, and the forget gate keeps memory. \"brilliant\" still counts at the end. Lower the forget gate to 0.6 to see it forget." :
+    ex === 1 ? "The LSTM adds up the evidence from the whole review. Lower the forget gate and it behaves more like a plain RNN." : "Both models handle short reviews well.";
+  $("#hintR").textContent = h;
+}
+function setSent(s, keepEx){ R.words = tokens(s).slice(0, 30); R.t = R.words.length; if (!keepEx) document.querySelectorAll("#exSeg button").forEach(x => x.setAttribute("aria-pressed", false)); drawRnn(); hintR(); }
+function setModel(m){
+  R.model = m; const r = m === "rnn";
+  $("#memLbl").textContent = r ? "Memory weight wₕ" : "Forget gate f";
+  $("#mem").value = r ? R.wh : R.f; $("#memVal").textContent = f2(r ? R.wh : R.f);
+  drawRnn(); hintR();
+}
+seg("#mSeg", b => setModel(b.dataset.m));
+seg("#exSeg", b => { $("#sent").value = EX[+b.dataset.e]; setSent(EX[+b.dataset.e], true); });
+$("#sent").addEventListener("input", e => setSent(e.target.value));
+$("#mem").addEventListener("input", e => { const v = +e.target.value; if (R.model === "rnn") R.wh = v; else R.f = v; $("#memVal").textContent = f2(v); drawRnn(); });
+$("#playR").addEventListener("click", () => {
+  clearInterval(R.timer); R.t = 0; drawRnn();
+  const fast = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (fast){ R.t = R.words.length; drawRnn(); return; }
+  R.timer = setInterval(() => { R.t++; drawRnn(); if (R.t >= R.words.length) clearInterval(R.timer); }, 380);
+});
+$("#allR").addEventListener("click", () => { clearInterval(R.timer); R.t = R.words.length; drawRnn(); });
+$("#sent").value = EX[0]; setSent(EX[0], true);
+
+/* ---------- 1. Bag of words vs sequence ---------- */
+function bow(){
+  const a = tokens($("#bowA").value), b = tokens($("#bowB").value);
+  const cnt = arr => { const m = {}; arr.forEach(t => m[t] = (m[t]||0)+1); return m; };
+  const ca = cnt(a), cb = cnt(b), keys = [...new Set([...a, ...b])].sort();
+  const sameBow = keys.every(k => (ca[k]||0) === (cb[k]||0)), sameSeq = a.join(" ") === b.join(" ");
+  $("#bowOut").innerHTML = `Bag of words A: <span class="mono">{${keys.map(k => esc(k)+": "+(ca[k]||0)).join(", ")}}</span><br>
+    Bag of words B: <span class="mono">{${keys.map(k => esc(k)+": "+(cb[k]||0)).join(", ")}}</span><br>
+    <b>Bag of words: ${sameBow ? "identical" : "different"}.</b> &nbsp; <b>As sequences: ${sameSeq ? "identical" : "different"}.</b>
+    ${sameBow && !sameSeq ? " A counting model cannot tell these sentences apart; a sequence model can." : ""}`;
+}
+$("#bowA").addEventListener("input", bow); $("#bowB").addEventListener("input", bow); bow();
+
+/* ---------- 1. Tokens to IDs ---------- */
+const VOCAB = ["the","a","and","was","is","it","of","to","this","film","movie","but","great","good","bad","plot","acting","slow","boring","i","loved","story"];
+function tok(){
+  const t = tokens($("#tokIn").value), L = +$("#tokLen").value; $("#lenVal").textContent = L;
+  const id = w => { const k = VOCAB.indexOf(w); return k < 0 ? 1 : k + 2; };
+  const ids = t.slice(0, L).map(id); while (ids.length < L) ids.push(0);
+  $("#tokChips").innerHTML = t.map((w,i) => `<span class="chip"${i >= L ? ' style="text-decoration:line-through;opacity:.5"' : ""}>${esc(w)}</span>`).join("") || "<span class='chip pad'>(empty)</span>";
+  $("#idChips").innerHTML = ids.map(v => `<span class="chip${v === 0 ? " pad" : ""}">${v === 1 ? "<b>1</b>" : v}</span>`).join("");
+  const unk = t.slice(0, L).filter(w => VOCAB.indexOf(w) < 0).length, cut = Math.max(0, t.length - L), pad = Math.max(0, L - t.length);
+  $("#tokNote").textContent = `${pad} padding position(s) (masked), ${cut} word(s) cut off, ${unk} unknown word(s) mapped to ID 1. The vocabulary here has only ${VOCAB.length} words; in Keras it is built from your training text with adapt().`;
+}
+$("#tokIn").addEventListener("input", tok); $("#tokLen").addEventListener("input", tok); tok();
+
+/* ---------- 2. RNN step table ---------- */
+function rstep(){
+  const wx = +$("#rx").value || 0, wh = +$("#rh").value || 0, xs = ["#x1","#x2","#x3"].map(s => +$(s).value || 0);
+  let h = 0, rows = "";
+  xs.forEach((x, t) => { const z = wx*x + wh*h, nh = Math.tanh(z);
+    rows += `<tr><td>${t+1}</td><td>${x}</td><td class="mono">tanh(${wx} × ${x} + ${wh} × ${f2(h)}) = tanh(${f2(z)})</td><td><b>${f2(nh)}</b></td></tr>`; h = nh; });
+  $("#stepTbl").innerHTML = `<tr><th>Step</th><th>Input xₜ</th><th>Calculation</th><th>Hidden state hₜ</th></tr>${rows}`;
+}
+["#rx","#rh","#x1","#x2","#x3"].forEach(s => $(s).addEventListener("input", rstep)); rstep();
+
+/* ---------- 2. Vanishing ---------- */
+function van(){
+  const w = +$("#vw").value, n = +$("#vn").value, v = Math.pow(w, n);
+  $("#vwVal").textContent = w.toFixed(2); $("#vnVal").textContent = n;
+  $("#vOut").textContent = v >= 1e5 ? v.toExponential(1) : v < 1e-4 ? v.toExponential(1) : v.toPrecision(3);
+  $("#vVerdict").textContent = v < 0.01 ? "Vanishing: the early steps have almost no effect on learning." : v > 100 ? "Exploding: training becomes unstable (loss may become NaN). Gradient clipping helps." : "The signal survives these steps.";
+}
+$("#vw").addEventListener("input", van); $("#vn").addEventListener("input", van); van();
+
+/* ---------- 3. LSTM gate ---------- */
+const GP = { keep:[0.9,1,0,0], replace:[0.9,0.1,0.95,-0.8], erase:[0.9,0,0,0] };
+function gate(){
+  const c = +$("#gc").value, f = +$("#gf").value, i = +$("#gi").value, n = +$("#gn").value, nc = f*c + i*n;
+  $("#gcVal").textContent = f2(c); $("#gfVal").textContent = f2(f); $("#giVal").textContent = f2(i); $("#gnVal").textContent = f2(n);
+  const msg = f > .8 && i < .2 ? "Memory kept: the conveyor belt carries it forward." : f < .3 && i > .7 ? "Old memory erased and new information written." : f < .2 && i < .2 ? "Memory wiped: nothing kept, nothing added." : "A mix of old and new memory.";
+  $("#gOut").innerHTML = `cₜ = ${f2(f)} × ${f2(c)} + ${f2(i)} × ${f2(n)} = <b>${f2(nc)}</b><br><span style="font-family:inherit">${msg}</span>`;
+}
+function gpreset(k){ const [c,f,i,n] = GP[k]; $("#gc").value = c; $("#gf").value = f; $("#gi").value = i; $("#gn").value = n; gate(); }
+seg("#gSeg", b => gpreset(b.dataset.g));
+["#gc","#gf","#gi","#gn"].forEach(s => $(s).addEventListener("input", () => { document.querySelectorAll("#gSeg button").forEach(x => x.setAttribute("aria-pressed", false)); gate(); }));
+gpreset("keep");
+
+/* ---------- 4. Speech frames ---------- */
+function speech(){
+  const d = +$("#sd").value, hop = +$("#sh").value, win = 25, fr = Math.floor((d*1000 - win)/hop) + 1;
+  $("#sdVal").textContent = d; $("#shVal").textContent = hop;
+  $("#sSamp").textContent = (d*16000).toLocaleString(); $("#sFr").textContent = fr.toLocaleString(); $("#sFeat").textContent = (fr*40).toLocaleString();
+  const W = 640, A = css("--classA"), B = css("--classB"), M = css("--muted");
+  let path = ""; for (let x = 0; x <= W; x += 2){ const t = x/W, env = 0.25 + 0.75*Math.abs(Math.sin(t*Math.PI*3.2)); const y = 70 + 48*env*Math.sin(x*0.9)*Math.sin(x*0.13); path += (x ? "L" : "M") + x + "," + y.toFixed(1); }
+  const span = 300, nShow = Math.max(1, Math.floor((span - win)/hop) + 1), pxPerMs = W/span;
+  let fr2 = ""; for (let k = 0; k < Math.min(nShow, 60); k++){ const x = k*hop*pxPerMs; fr2 += `<rect x="${x}" y="12" width="${win*pxPerMs}" height="116" fill="${B}" opacity="${k % 2 ? .10 : .18}"/>`; }
+  $("#wavSvg").innerHTML = `${fr2}<path d="${path}" fill="none" stroke="${A}" stroke-width="1.5"/><text x="${W-4}" y="138" font-size="12" text-anchor="end" fill="${M}">first 0.3 s shown · shaded: ${win} ms frames every ${hop} ms</text>`;
+}
+$("#sd").addEventListener("input", speech); $("#sh").addEventListener("input", speech); speech();
+
+/* ---------- 5. Self-attention ---------- */
+const AS = [{w:["the","river","bank"], s:[0.5,3.0,2.0]}, {w:["the","bank","loan"], s:[0.5,2.0,3.0]}];
+let aIdx = 0, dk = 4;
+function aSliders(){
+  const S = AS[aIdx];
+  $("#aSliders").innerHTML = S.w.map((w,k) => `<label class="ctl">Score of "bank" with "${w}" <span class="val" id="asv${k}">${S.s[k].toFixed(1)}</span><input type="range" id="as${k}" min="-2" max="6" step="0.1" value="${S.s[k]}"></label>`).join("");
+  S.w.forEach((w,k) => $("#as"+k).addEventListener("input", e => { S.s[k] = +e.target.value; $("#asv"+k).textContent = S.s[k].toFixed(1); attn(); }));
+  attn();
+}
+function attn(){
+  const S = AS[aIdx], sc = S.s.map(v => v/Math.sqrt(dk)), m = Math.max(...sc), ex = sc.map(v => Math.exp(v - m)), sum = ex.reduce((a,b) => a+b, 0), wt = ex.map(v => v/sum);
+  $("#aBars").innerHTML = S.w.map((w,k) => `<div class="wbar"><span class="mono">${w}</span><span style="background:var(--brand-soft);border-radius:6px"><i style="width:${(wt[k]*100).toFixed(1)}%"></i></span><b>${wt[k].toFixed(2)}</b></div>`).join("");
+  const ctxIdx = S.w.map((w,k) => k).filter(k => S.w[k] !== "bank" && S.w[k] !== "the"), top = ctxIdx[0], cw = S.w[top];
+  const share = wt[top], meaning = cw === "river" ? "the side of a river" : "a place for money";
+  $("#aOut").innerHTML = `new "bank" = ${S.w.map((w,k) => wt[k].toFixed(2) + " × V(" + w + ")").join(" + ")}<br>` +
+    (share > 0.4 ? `"${cw}" contributes ${Math.round(share*100)}% of the new vector, so "bank" now leans towards <b>${meaning}</b>.` : `"${cw}" contributes only ${Math.round(share*100)}%: the context is weak, so the meaning of "bank" stays unclear.`) +
+    (dk === 1 ? " With dₖ = 1 there is no scaling, so softmax becomes sharper." : dk === 64 ? " With dₖ = 64 the scores are divided by 8, so the weights become flatter in this tiny example. In real models, Q·K scores grow with dₖ, which is why we divide." : "");
+}
+seg("#aSeg", b => { aIdx = +b.dataset.a; aSliders(); });
+seg("#dSeg", b => { dk = +b.dataset.d; attn(); });
+aSliders();
+
+/* ---------- 6. n vs n² ---------- */
+const NS = [32, 64, 128, 256, 512, 1024, 2048, 4096];
+function nn2(){
+  const n = NS[+$("#nl").value]; $("#nlVal").textContent = n;
+  $("#nRnn").textContent = n.toLocaleString(); $("#nAtt").textContent = (n*n).toLocaleString();
+  $("#nNote").textContent = (n <= 512 ? "BERT-base accepts up to 512 tokens, so this fits. " : "This is longer than BERT's 512-token limit: you would need to cut the text or use a long-context model. ") +
+    "Doubling n doubles the RNN steps but makes the attention work 4 times bigger. The attention work runs in parallel on a GPU, while the RNN steps must wait for each other.";
+}
+$("#nl").addEventListener("input", nn2); nn2();
+
+/* ---------- 6. Model chooser ---------- */
+function chooser(){
+  const t = pressed("#cTask").dataset.v, d = pressed("#cData").dataset.v, p = pressed("#cDev").dataset.v; let ti, tx;
+  if (t === "cls"){ ti = p === "phone" ? "Fine-tune DistilBERT or a small BERT, then compress it" : "Fine-tune a pretrained encoder (BERT, RoBERTa, XLM-R for Malay)";
+    tx = (d === "small" ? "With little labelled data, a pretrained encoder works far better than an LSTM from scratch. " : "With lots of data, a BiLSTM is a fair comparison, but a fine-tuned encoder usually still wins. ") + "Always compare with TF-IDF + Logistic Regression as a baseline." + (p === "phone" ? " On a phone, check size and latency; a BiLSTM or a quantised model may be the practical choice." : ""); }
+  else if (t === "gen"){ ti = "Use a pretrained decoder (GPT-style) or encoder–decoder (T5, BART)";
+    tx = "Generating text from scratch needs huge data, so start from a pretrained model and fine-tune it, or use prompting." + (p === "phone" ? " On a phone, use a small model or run it on a server." : ""); }
+  else if (t === "asr"){ ti = "Fine-tune Whisper or wav2vec 2.0";
+    tx = "Pretrained speech models already know a lot about sound, including Malay for Whisper. " + (d === "small" ? "With a small dataset, fine-tune only, or use Whisper as it is. " : "") + (p === "phone" ? "On a phone, choose the smallest Whisper size (tiny or base)." : "Compare with an MFCC + CNN/BiLSTM model if you need a from-scratch baseline."); }
+  else { ti = d === "small" ? "Start with an LSTM or GRU, plus a classical baseline" : "LSTM/GRU, or a time-series Transformer";
+    tx = "Language models like BERT are pretrained on text, not sensor readings, so they do not help here. LSTM and GRU remain strong for small, streaming and time-series data (see Week 5)." + (p === "phone" ? " A small GRU runs well on devices." : ""); }
+  $("#cTitle").textContent = ti; $("#cText").textContent = tx;
+}
+["#cTask","#cData","#cDev"].forEach(s => seg(s, chooser)); chooser();
+
+/* ---------- 7. Imbalance ---------- */
+function imb(){
+  const p = +$("#im").value/100, acc = 1 - p, f1maj = 2*acc/(1 + acc), mf1 = f1maj/2;
+  $("#imVal").textContent = Math.round(p*100) + "%";
+  $("#imAcc").textContent = Math.round(acc*100) + "%"; $("#imRec").textContent = "0%"; $("#imF1").textContent = mf1.toFixed(2);
+  $("#imNote").textContent = `The model finds none of the ${Math.round(p*1000)} hate-speech messages, yet accuracy is ${Math.round(acc*100)}%. Macro F1 averages the F1 of both classes, so it exposes the problem. Use class weights or resampling, and report per-class recall.`;
+}
+$("#im").addEventListener("input", imb); imb();
+
+/* ---------- Quizzes ---------- */
+const QUIZ = {
+ seq:[["Why can't a bag-of-words model tell \"not good, bad\" from \"not bad, good\"?",["It has no vocabulary","It counts words and ignores their order","It only works in Malay","It needs a GPU"],1,"Both sentences contain the same words with the same counts."],
+      ["What does the Embedding layer do?",["Splits text into words","Turns each word ID into a dense vector that is learned during training","Removes stop words","Pads sentences"],1,"It is a trainable lookup table: vocabulary size × embedding size."],
+      ["Why do we use masking with padded sequences?",["To hide the test set","So the model ignores the padding zeros","To make the vocabulary smaller","To add noise"],1,"Padding only makes the batch rectangular; it carries no meaning."]],
+ rnn:[["In hₜ = tanh(Wₓxₜ + Wₕhₜ₋₁ + b), what does hₜ₋₁ represent?",["The next word","The memory from the previous step","The label","The learning rate"],1,"The previous hidden state carries what the network has read so far."],
+      ["Why can an RNN read sentences of any length?",["It uses a different network for each word","The same weights are reused at every step","It ignores long sentences","It reads all words at once"],1,"One small network is applied again and again: weight sharing over time."],
+      ["The loss suddenly becomes NaN while training an RNN. A good first fix is:",["Gradient clipping, e.g. Adam(clipnorm=1.0)","Remove the validation set","Use a larger learning rate","Add more padding"],0,"NaN often means exploding gradients; clipping caps their size."]],
+ lstm:[["How many gates does an LSTM cell have?",["2","3","4","5"],1,"Forget, input and output. GRU has 2: update and reset."],
+       ["You stack two LSTM layers and get a shape error. What is missing?",["return_sequences=True on the first LSTM","A larger batch","Dropout","A Bidirectional wrapper"],0,"The second LSTM needs the whole sequence, not only the last step."],
+       ["When should you NOT use a bidirectional RNN?",["Sentiment of a finished review","Tagging names in a sentence","Real-time prediction of the next word as someone types","Classifying a recorded clip"],2,"Bidirectional models need future words, which are not available in real time."]],
+ speech:[["About how many frames does a 2-second clip give with 25 ms windows every 10 ms?",["20","About 200","2,000","32,000"],1,"About 100 frames per second, so roughly 200 frames."],
+         ["Why is CTC loss used in speech-to-text?",["To remove noise","Because we do not know which audio frames belong to which letter","To make the model smaller","To translate languages"],1,"CTC lets the model learn the alignment between many frames and fewer letters."]],
+ attn:[["What problem did attention first solve in encoder–decoder RNNs?",["Too many parameters","The whole sentence had to fit into one fixed vector","Padding","Overfitting on images"],1,"Attention lets the decoder look back at every encoder state."],
+       ["In self-attention, the softmax weights for one word:",["Add up to 1","Are always equal","Are set by the programmer","Are the word IDs"],0,"They are like percentages of attention across all words."],
+       ["Why do we divide QKᵀ by √dₖ?",["To make the model faster","To keep the scores from growing too large, so softmax is not too sharp","To remove padding","To add position information"],1,"Large scores push softmax towards giving all weight to one word."]],
+ tf:[["Self-attention alone ignores word order. What adds it back?",["Dropout","Positional encoding","Layer norm","Softmax"],1,"A position signal is added to each token embedding."],
+     ["Which model family suits text classification best?",["Encoder only, e.g. BERT","Decoder only, e.g. GPT","No model","Encoder–decoder only"],0,"Encoders read the whole sentence in both directions, ideal for understanding."],
+     ["Why use a small learning rate (e.g. 2e-5) when fine-tuning BERT?",["To train faster","To avoid destroying what the model learned in pretraining","Because the dataset is large","It is required by Colab"],1,"Same idea as fine-tuning MobileNetV2 in Weeks 6–7."]],
+ chal:[["With 1,000 labelled reviews, which is often a strong choice?",["An RNN trained from scratch","A simple baseline or a fine-tuned pretrained model","A Transformer trained from scratch","No validation set"],1,"Deep models trained from scratch need far more data."],
+       ["A model trained on movie reviews performs badly on Manglish tweets. This is:",["Domain shift","Data leakage","Underfitting on training data","Gradient clipping"],0,"The new data looks different from the training data."],
+       ["Only 2% of messages are hate speech. Which metric should you report?",["Accuracy only","Macro F1 and per-class recall","Training loss only","Number of epochs"],1,"Accuracy hides a model that never finds the rare class."]]
+};
+document.querySelectorAll(".quiz").forEach(box => {
+  box.insertAdjacentHTML("beforeend", `<h3>Check your understanding</h3>`);
+  QUIZ[box.dataset.quiz].forEach(([stem, opts, ans, why]) => {
+    const q = document.createElement("div"); q.className = "q";
+    q.innerHTML = `<p class="stem">${stem}</p><div class="opts">${opts.map((o,i)=>`<button type="button" data-i="${i}">${o}</button>`).join("")}</div><p class="fb" aria-live="polite"></p>`;
+    q.querySelectorAll(".opts button").forEach(b => b.addEventListener("click", () => {
+      const right = +b.dataset.i === ans, fb = q.querySelector(".fb");
+      q.querySelectorAll(".opts button").forEach(x => x.classList.remove("right","wrong")); b.classList.add(right ? "right" : "wrong");
+      fb.className = "fb " + (right ? "right" : "wrong"); fb.innerHTML = right ? `Correct. <span>${why}</span>` : "Not quite, try again.";
+    }));
+    box.appendChild(q);
+  });
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => { drawRnn(); speech(); });
+</script>
+</body>
+</html>
